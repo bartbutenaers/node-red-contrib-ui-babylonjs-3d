@@ -1,0 +1,271 @@
+<!--
+  Copyright 2021, Bart Butenaers
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  http://www.apache.org/licenses/LICENSE-2.0
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<script type="text/javascript">
+    RED.nodes.registerType('ui_babylon_js',{
+        category: 'dashboard',
+        color: 'rgb( 63, 173, 181)',
+        defaults: {
+            name: {value: ''},
+            group: {type: 'ui_group', required:true},
+            order: {value: 0},
+            width: {
+                value: 3,
+                validate: function(v) {
+                    var valid = true
+                    var width = v||0;
+                    var currentGroup = $('#node-input-group').val()|| this.group;
+                    var groupNode = RED.nodes.node(currentGroup);
+                    valid = !groupNode || +width <= +groupNode.width;
+                    $("#node-input-size").toggleClass("input-error",!valid);
+                    return valid;
+                }},
+            height: {value: 3},
+            name: {value: ''},
+            folder: {value: ''},
+            filename: {value: ''},
+            outputField: {value: "payload"},
+            events: {value: []}
+        },
+        inputs:1,
+        outputs:1,
+        icon: "font-awesome/fa-cubes",
+        align: 'left',
+        paletteLabel:"babylonJs 3D",
+        label: function() {
+            return this.name || "BabylonJs 3D";
+        },
+        oneditprepare: function() {
+            var node = this;
+            
+            $("#node-input-size").elementSizer({
+                width: "#node-input-width",
+                height: "#node-input-height",
+                group: "#node-input-group"
+            });
+            
+            // Show tabsheets
+            node.tabs = RED.tabs.create({
+                id: "node-babylonjs-tabs",
+                onchange: function(tab) {
+                    //console.log("tabs.onchange",tab);
+                    // Show only the content (i.e. the children) of the selected tabsheet, and hide the others
+                    $("#node-babylonjs-tabs-content").children().hide();
+                    $("#" + tab.id).show();
+                    //updateEditorHeight(node,node.editor);
+                    
+                    /*if(tab.id == "node-svg-tab-animations" || tab.id == "node-svg-tab-clickable" || tab.id == "node-svg-tab-binding" || tab.id == "node-svg-tab-javascript"){
+                        let svgStr = node.editor ? node.editor.getValue() : ""; 
+                        try {
+                            // When tabsheet changes, all autocomplete sources should be updated (since element ids, ... might have changed)
+                            updateSvgIdHelpers(node, svgStr);    
+                        } 
+                        catch (error) {
+                            console.error(error)
+                        }
+                    }
+                    else if (tab.id == "node-svg-tab-editor") {
+                        updateSvgEditorButton();
+                    }*/
+                }
+            });
+            node.tabs.addTab({
+                id: "node-babylonjs-tab-scene",
+                label: "Scene"
+            });
+            node.tabs.addTab({
+                id: "node-babylonjs-tab-events",
+                label: "Event"
+            });
+            node.tabs.addTab({
+                id: "node-babylonjs-tab-animations",
+                label: "Animation"
+            });
+            
+            var actionOptions = {
+                "nothing"           : "Nothing",
+                "pick"              : "Pick",
+                "doublePick"        : "Double pick",
+                "pickDown"          : "Pick down",
+                "pickUp"            : "Pick up",
+                "pickOut"           : "Pick out",
+                "leftPick"          : "Left pick",
+                "rightPick"         : "Right pick",
+                "centerPick"        : "Center pick",
+                "pointerOver"       : "Pointer over",
+                "pointerOut"        : "Pointer out",
+                "intersectionEnter" : "Intersection enter",
+                "intersectionExit"  : "Intersection exit"
+            }
+            
+            // Create a table of (scene or mesh) events
+            const supportedPayloadTypes = ['flow', 'global', 'str', 'num', 'bool', 'json', 'date'];
+            const defaultPayloadType = "str";
+            var eventsList = $("#node-input-events-container").css('min-height','150px').css('min-width','450px').editableList({
+                header: $("<div>").append($.parseHTML(
+                   "<div style='width:20%; margin-left:5px; display: inline-grid'><b>Action</b></div>" +
+                   "<div style='width:17%; margin-left:5px; display: inline-grid'><b>Selector</b></div>" +
+                   "<div style='width:38%; margin-left:4px; display: inline-grid' id='node-input-columnPayload'><b>msg.payload</b></div>" +
+                   "<div style='width:17%; margin-left:-3px; display: inline-grid'><b>msg.topic</b></div>")),
+                addItem: function(container, i, event) {
+                    // Add a new row to the editableList
+                    var row = $('<div/>').appendTo(container);
+                    
+                    // Column 1 : Add an input field (type option) to the new row, that represents the action type 
+                    var actionField = $('<select/>',{class:"node-input-event-action",type:"text",placeholder:"click"}).css({"width":"20%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
+                    for(var val in actionOptions) {
+                        $('<option/>', {value: val, text: actionOptions[val]}).appendTo(actionField);
+                    }
+                    actionField.val(event.action || "pick");
+                    
+                    // Column 2 : Add an input field (type string) to the new row, that represents the selector for this event to operate on.
+                    // TODO for scene actions, this field should be disabled
+                    var selectorField = $('<input/>',{class:"node-input-event-selector",type:"text",placeholder:"Mesh selector"}).css({"width":"17%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
+                    selectorField.val(event.selector);
+                    selectorField.focusin(function() { // Only load autocomplete on selection (performance reasons)
+                        if(selectorField.data('ui-autocomplete') == undefined){ //only load if not already loaded
+                            /*TODO selectorField.autocomplete({
+                                classes: {
+                                    "ui-autocomplete": "ui-svg-ui-autocomplete", //add custom class for styling the dropdown
+                                },
+                                source: function(req, add){
+                                    var list = [...node.nonAnimationIdSelectors,...node.nonAnimationClasses] || []
+                                    add($.ui.autocomplete.filter(list , req.term));
+                                }
+                            });*/
+                        }
+                    });                     
+
+                    // Column 3 : Add a input field (type string) to the new row, that represents the msg.payload content 
+                    var payloadField = $('<input/>',{class:"node-input-event-payload",type:"text",placeholder:"payload"}).css({"width":"38%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
+                    var payloadTypeField = $('<input/>',{class:"node-input-event-payloadType",type:"hidden"}).appendTo(row);
+                    var payloadType = supportedPayloadTypes.includes(event.payloadType) ? event.payloadType : defaultPayloadType;
+                    payloadField.typedInput({
+                        default: defaultPayloadType,
+                        typeField: payloadTypeField,
+                        types: supportedPayloadTypes
+                    });
+                    payloadField.typedInput("type", payloadType);              
+                    payloadField.typedInput("value", event.payload);  
+                    
+                    // Column 4 : Add an input field (type string) to the new row, that represents the msg.topic content
+                    var topicField = $('<input/>',{class:"node-input-event-topic",type:"text",placeholder:"Topic"}).css({"width":"17%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
+                    topicField.val(event.topic);
+                    
+                    // When there is not yet a topic or payload, the target Id should be cloned (when complete) to the topic and payload (as a default value).
+                    selectorField.on("change", function(){
+                        if (payloadType === "str" && !payloadField.typedInput("value")) {
+                            payloadField.typedInput('value',$(this).val());
+                        }
+                        
+                        if (!topicField.val() || topicField.val() === "") {
+                            topicField.val($(this).val());
+                        }
+                    });
+                },
+                removable: true
+            });
+            
+            // Show all the events (stored in this node) into the editableList
+            if (this.events) {
+                this.events.forEach(function (event, index) {
+                    eventsList.editableList('addItem', {selector:event.selector, action:event.action, payload:event.payload, payloadType:event.payloadType, topic:event.topic});
+                });
+            }
+            
+            // Make sure the column name keeps being identical to the selected output message field
+            $('#node-input-outputField').on('change', function() {
+                var outputField = $('#node-input-outputField').val();
+                $('#node-input-columnPayload').css("font-weight","Bold");
+                $('#node-input-columnPayload').text("msg." + outputField);
+            });
+            $('#node-input-outputField').change();
+        },
+        oneditsave: function() {
+            var node = this;
+
+            // Copy all the events from the editableList to this node
+            node.events = [];
+            var eventsList = $("#node-input-events-container").editableList('items');
+            eventsList.each(function(i) {
+                var event       = $(this);
+                var selector    = event.find(".node-input-event-selector").val();
+                var action      = event.find(".node-input-event-action").val();
+                var payload     = event.find(".node-input-event-payload").val();
+                var payloadType = event.find(".node-input-event-payloadType").val();
+                var topic       = event.find(".node-input-event-topic").val();
+
+                node.events.push({targetId:selector, action:action, payload:payload, payloadType:payloadType, topic:topic});
+            });
+        }
+    });
+</script>
+
+<script type="text/x-red" data-template-name="ui_babylon_js">
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row" id="template-row-group">
+        <label for="node-input-group"><i class="fa fa-table"></i> Group</span></label>
+        <input type="text" id="node-input-group">
+    </div>    
+    <div class="form-row" id="template-row-size">
+        <label><i class="fa fa-object-group"></i> Size</span></label>
+        <input type="hidden" id="node-input-width">
+        <input type="hidden" id="node-input-height">
+        <button class="editor-button" id="node-input-size"></button>
+    </div>
+    <div class="form-row">
+        <!-- Tabsheets -->
+        <ul style="background: #fff; min-width: 600px; margin-bottom: 20px;" id="node-babylonjs-tabs"></ul>
+    </div>
+    <div id="node-babylonjs-tabs-content" style="min-height: 150px">
+        <!-- Content of all tabsheets -->
+        <div id="node-babylonjs-tab-scene">
+            <div class="form-row">
+                <label for="node-input-folder"><i class="fa fa-folder-o"></i> Folder</label>
+                <input type="text" id="node-input-folder" placeholder="/directory/containing/the/3d/file(s)">
+            </div>
+            <div class="form-row">
+                <label for="node-input-filename"><i class="fa fa-file-o"></i> File</label>
+                <input type="text" id="node-input-filename" placeholder="xxx.gltf or xxx.obj or xxx.babylon">
+            </div>
+        </div>
+        <!-- Content of all tabsheets -->
+        <div id="node-babylonjs-tab-events">
+            <div class="form-row" style="padding-left: 2px;">
+                <label for="node-input-outputField"><i class="fa fa-envelope"></i> Output to</label>
+                <div class="red-ui-typedInput-container" style="width: 70%; margin-right: 5px; margin-left: 3px;">    
+                    <button class="red-ui-typedInput-type-select"> 
+                        <span class="red-ui-typedInput-type-label">msg.</span>
+                    </button>
+                    <div class="red-ui-typedInput-input-wrap" style="left: 46px; right: 2px;">
+                        <input type="text" id="node-input-outputField" placeholder="payload" style="width: 100%; margin-right: 0px; margin-left: 0px; border-top-right-radius: 0px; border-bottom-right-radius: 0px;" autocomplete="disable" dir="" class="red-ui-typedInput-input">
+                    </div>
+                </div>
+            </div>
+            <div class="form-row form-row-auto-height">
+                <!-- Table with events -->
+                <ol id="node-input-events-container"></ol>
+            </div>
+        </div>
+        <div id="node-babylonjs-tab-animations">
+            <!-- Table with animations -->
+            <ol id="node-input-events-container"></ol>
+        </div>
+    </div>
+</script>
+<script type="text/x-red" data-help-name="ui_babylon_js">
+    <p>A Node Red node to show a 3D scene based on BabylonJs.</p>
+</script>
