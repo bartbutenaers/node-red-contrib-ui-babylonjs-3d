@@ -35,7 +35,7 @@
             folder: {value: ''},
             filename: {value: ''},
             outputField: {value: "payload"},
-            events: {value: []}
+            actions: {value: []}
         },
         inputs:1,
         outputs:1,
@@ -84,102 +84,111 @@
                 label: "Scene"
             });
             node.tabs.addTab({
-                id: "node-babylonjs-tab-events",
-                label: "Event"
+                id: "node-babylonjs-tab-actions",
+                label: "Action"
             });
             node.tabs.addTab({
                 id: "node-babylonjs-tab-animations",
                 label: "Animation"
             });
             
-            var actionOptions = {
-                "nothing"           : "Nothing",
-                "pick"              : "Pick",
-                "doublePick"        : "Double pick",
-                "pickDown"          : "Pick down",
-                "pickUp"            : "Pick up",
-                "pickOut"           : "Pick out",
-                "leftPick"          : "Left pick",
-                "rightPick"         : "Right pick",
-                "centerPick"        : "Center pick",
-                "pointerOver"       : "Pointer over",
-                "pointerOut"        : "Pointer out",
-                "intersectionEnter" : "Intersection enter",
-                "intersectionExit"  : "Intersection exit"
+            // Custom typedInput definitions
+            var sceneTypeDefinition = {
+               value: "scene",
+               label: "Scene",
+               hasValue: false
             }
-            
-            // Create a table of (scene or mesh) events
+            var meshIdTypeDefinition = {
+               value: "meshid",
+               label: "Mesh",
+               hasValue: true,
+               type: "string"
+            }
+            var meshIdArrayTypeDefinition = {
+               value: "meshidArray",
+               label: "Mesh[]",
+               hasValue: true,
+               type: "json"
+            }
+            var tagTypeDefinition = {
+               value: "tag",
+               label: "Tag",
+               hasValue: true,
+               type: "string"
+            }            
+
+            // Create a table of (scene or mesh) actions
             const supportedPayloadTypes = ['flow', 'global', 'str', 'num', 'bool', 'json', 'date'];
             const defaultPayloadType = "str";
-            var eventsList = $("#node-input-events-container").css('min-height','150px').css('min-width','450px').editableList({
+            var actionsList = $("#node-input-actions-container").css('min-height','150px').css('min-width','450px').editableList({
                 header: $("<div>").append($.parseHTML(
-                   "<div style='width:20%; margin-left:5px; display: inline-grid'><b>Action</b></div>" +
-                   "<div style='width:17%; margin-left:5px; display: inline-grid'><b>Selector</b></div>" +
-                   "<div style='width:38%; margin-left:4px; display: inline-grid' id='node-input-columnPayload'><b>msg.payload</b></div>" +
-                   "<div style='width:17%; margin-left:-3px; display: inline-grid'><b>msg.topic</b></div>")),
-                addItem: function(container, i, event) {
+                   "<div style='width:24%; margin-left:5px; display: inline-grid'><b>Selector</b></div>" +
+                   "<div style='width:22%; margin-left:5px; display: inline-grid'><b>Action</b></div>" +
+                   "<div style='width:23%; margin-left:4px; display: inline-grid' id='node-input-columnPayload'><b>msg.payload</b></div>" +
+                   "<div style='width:23%; margin-left:-3px; display: inline-grid'><b>msg.topic</b></div>")),
+                addItem: function(container, i, action) {
+                    var actionField;
+                
                     // Add a new row to the editableList
                     var row = $('<div/>').appendTo(container);
-                    
-                    // Column 1 : Add an input field (type option) to the new row, that represents the action type 
-                    var actionField = $('<select/>',{class:"node-input-event-action",type:"text",placeholder:"click"}).css({"width":"20%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
-                    for(var val in actionOptions) {
-                        $('<option/>', {value: val, text: actionOptions[val]}).appendTo(actionField);
-                    }
-                    actionField.val(event.action || "pick");
-                    
-                    // Column 2 : Add an input field (type string) to the new row, that represents the selector for this event to operate on.
+
+                    // Column 1 : Add an input field (type string) to the new row, that represents the selector for this action to operate on.
                     // TODO for scene actions, this field should be disabled
-                    var selectorField = $('<input/>',{class:"node-input-event-selector",type:"text",placeholder:"Mesh selector"}).css({"width":"17%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
-                    selectorField.val(event.selector);
-                    selectorField.focusin(function() { // Only load autocomplete on selection (performance reasons)
-                        if(selectorField.data('ui-autocomplete') == undefined){ //only load if not already loaded
-                            /*TODO selectorField.autocomplete({
-                                classes: {
-                                    "ui-autocomplete": "ui-svg-ui-autocomplete", //add custom class for styling the dropdown
-                                },
-                                source: function(req, add){
-                                    var list = [...node.nonAnimationIdSelectors,...node.nonAnimationClasses] || []
-                                    add($.ui.autocomplete.filter(list , req.term));
-                                }
-                            });*/
+                    var selectorField = $('<input/>',{class:"node-input-action-selector",type:"text",placeholder:"Mesh selector"}).css({"width":"24%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
+                    selectorField.typedInput({types: [sceneTypeDefinition, meshIdTypeDefinition, meshIdArrayTypeDefinition, tagTypeDefinition]});
+                    selectorField.typedInput("type", action.selectorType);
+                    selectorField.typedInput("value", action.selector);
+                    selectorField.on('change', function(){
+                        actionField.empty();
+                    
+                        // The available actions depend on the selector type
+                        switch ( selectorField.typedInput("type")) {
+                            case "scene":
+                                $('<option/>', {value: "everyFrame"       , text: "Every frame"}).appendTo(actionField);
+                                $('<option/>', {value: "keyDown"          , text: "Key down"}).appendTo(actionField);
+                                $('<option/>', {value: "keyUp"            , text: "Key up"}).appendTo(actionField);
+                                break;
+                            case "meshid":
+                            case "tag":
+                                $('<option/>', {value: "nothing"           , text: "Nothing"}).appendTo(actionField);
+                                $('<option/>', {value: "pick"              , text: "Pick"}).appendTo(actionField);
+                                $('<option/>', {value: "doublePick"        , text: "Double pick"}).appendTo(actionField);
+                                $('<option/>', {value: "pickDown"          , text: "Pick down"}).appendTo(actionField);
+                                $('<option/>', {value: "pickUp"            , text: "Pick up"}).appendTo(actionField);
+                                $('<option/>', {value: "pickOut"           , text: "Pick out"}).appendTo(actionField);
+                                $('<option/>', {value: "leftPick"          , text: "Left pick"}).appendTo(actionField);
+                                $('<option/>', {value: "rightPick"         , text: "Right pick"}).appendTo(actionField);
+                                $('<option/>', {value: "centerPick"        , text: "Center pick"}).appendTo(actionField);
+                                $('<option/>', {value: "pointerOver"       , text: "Pointer over"}).appendTo(actionField);
+                                $('<option/>', {value: "pointerOut"        , text: "Pointer out"}).appendTo(actionField);
+                                $('<option/>', {value: "intersectionEnter" , text: "Intersect enter"}).appendTo(actionField);
+                                $('<option/>', {value: "intersectionExit"  , text: "Intersect exit"}).appendTo(actionField);
+                                break;
                         }
-                    });                     
+                    });
+                    
+                    // Column 2 : Add an input field (type option) to the new row, that represents the action type 
+                    actionField = $('<select/>',{class:"node-input-action-action",type:"text",placeholder:"click"}).css({"width":"22%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
+                    actionField.val(action.action || "pick");
+
+                    // Make sure the onchange handler of the selectorField fills the dropdown options of the actionField
+                    selectorField.change();
 
                     // Column 3 : Add a input field (type string) to the new row, that represents the msg.payload content 
-                    var payloadField = $('<input/>',{class:"node-input-event-payload",type:"text",placeholder:"payload"}).css({"width":"38%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
-                    var payloadTypeField = $('<input/>',{class:"node-input-event-payloadType",type:"hidden"}).appendTo(row);
-                    var payloadType = supportedPayloadTypes.includes(event.payloadType) ? event.payloadType : defaultPayloadType;
-                    payloadField.typedInput({
-                        default: defaultPayloadType,
-                        typeField: payloadTypeField,
-                        types: supportedPayloadTypes
-                    });
-                    payloadField.typedInput("type", payloadType);              
-                    payloadField.typedInput("value", event.payload);  
+                    var payloadField = $('<input/>',{class:"node-input-action-payload",type:"text",placeholder:"payload"}).css({"width":"23%","margin-left":"5px","margin-right":"5px"}).appendTo(row);            
+                    payloadField.val(action.payload);  
                     
                     // Column 4 : Add an input field (type string) to the new row, that represents the msg.topic content
-                    var topicField = $('<input/>',{class:"node-input-event-topic",type:"text",placeholder:"Topic"}).css({"width":"17%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
-                    topicField.val(event.topic);
-                    
-                    // When there is not yet a topic or payload, the target Id should be cloned (when complete) to the topic and payload (as a default value).
-                    selectorField.on("change", function(){
-                        if (payloadType === "str" && !payloadField.typedInput("value")) {
-                            payloadField.typedInput('value',$(this).val());
-                        }
-                        
-                        if (!topicField.val() || topicField.val() === "") {
-                            topicField.val($(this).val());
-                        }
-                    });
+                    var topicField = $('<input/>',{class:"node-input-action-topic",type:"text",placeholder:"Topic"}).css({"width":"23%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
+                    topicField.val(action.topic);
                 },
                 removable: true
             });
-            
-            // Show all the events (stored in this node) into the editableList
-            if (this.events) {
-                this.events.forEach(function (event, index) {
-                    eventsList.editableList('addItem', {selector:event.selector, action:event.action, payload:event.payload, payloadType:event.payloadType, topic:event.topic});
+    debugger;        
+            // Show all the actions (stored in this node) into the editableList
+            if (this.actions) {
+                this.actions.forEach(function (action, index) {
+                    actionsList.editableList('addItem', {selectorType: action.selectorType, selector:action.selector, action:action.action, payload:action.payload, topic:action.topic});
                 });
             }
             
@@ -193,19 +202,19 @@
         },
         oneditsave: function() {
             var node = this;
+debugger
+            // Copy all the actions from the editableList to this node
+            node.actions = [];
+            var actionsList = $("#node-input-actions-container").editableList('items');
+            actionsList.each(function(i) {
+                var action       = $(this);
+                var selectorType = action.find(".node-input-action-selector").typedInput('type');
+                var selector     = action.find(".node-input-action-selector").typedInput('value');
+                var action       = action.find(".node-input-action-action").val();
+                var payload      = action.find(".node-input-action-payload").val();
+                var topic        = action.find(".node-input-action-topic").val();
 
-            // Copy all the events from the editableList to this node
-            node.events = [];
-            var eventsList = $("#node-input-events-container").editableList('items');
-            eventsList.each(function(i) {
-                var event       = $(this);
-                var selector    = event.find(".node-input-event-selector").val();
-                var action      = event.find(".node-input-event-action").val();
-                var payload     = event.find(".node-input-event-payload").val();
-                var payloadType = event.find(".node-input-event-payloadType").val();
-                var topic       = event.find(".node-input-event-topic").val();
-
-                node.events.push({targetId:selector, action:action, payload:payload, payloadType:payloadType, topic:topic});
+                node.actions.push({selectorType:selectorType, selector:selector, action:action, payload:payload, topic:topic});
             });
         }
     });
@@ -243,7 +252,7 @@
             </div>
         </div>
         <!-- Content of all tabsheets -->
-        <div id="node-babylonjs-tab-events">
+        <div id="node-babylonjs-tab-actions">
             <div class="form-row" style="padding-left: 2px;">
                 <label for="node-input-outputField"><i class="fa fa-envelope"></i> Output to</label>
                 <div class="red-ui-typedInput-container" style="width: 70%; margin-right: 5px; margin-left: 3px;">    
@@ -256,13 +265,13 @@
                 </div>
             </div>
             <div class="form-row form-row-auto-height">
-                <!-- Table with events -->
-                <ol id="node-input-events-container"></ol>
+                <!-- Table with actions -->
+                <ol id="node-input-actions-container"></ol>
             </div>
         </div>
         <div id="node-babylonjs-tab-animations">
             <!-- Table with animations -->
-            <ol id="node-input-events-container"></ol>
+            <ol id="node-input-actions-container"></ol>
         </div>
     </div>
 </script>
