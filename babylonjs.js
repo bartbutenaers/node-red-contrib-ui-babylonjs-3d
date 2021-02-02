@@ -207,7 +207,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                     },
                     initController: function($scope, events) {
                         $scope.flag = true;
-  debugger;                      
+
                         function logError(error) {
                             // Log the error on the client-side in the browser console log
                             console.log(error);
@@ -218,15 +218,20 @@ https://doc.babylonjs.com/divingDeeper/tags
                             }
                         }
                         
+                        // Gets the meshes based on meshId, meshName, meshTag
                         function getMeshes(payload, required) {
                             var mesh;
                             var meshes = [];
-                            
+
                             if (payload.meshName && payload.meshName !== "") {
+                                if (Array.isArray(payload.meshName)) {
+                                    payload.meshName.forEach(function(name) {
+                                        meshes.push($scope.scene.getMeshByName(name));
+                                    });
+                                }
                                 if (payload.meshName.startsWith("^")) {
                                     var regex = new RegExp(payload.meshName);
-                                    
-                                    
+
                                     $scope.scene.meshes.forEach(function (meshToTest) {
                                         if (meshToTest.name && regex.test(meshToTest.name)) {
                                              meshes.push(meshToTest);
@@ -240,8 +245,13 @@ https://doc.babylonjs.com/divingDeeper/tags
                             else if (payload.meshId && payload.meshId !== "") {
                                 mesh = $scope.scene.getMeshByID(payload.meshId);
                             }
+                            else if (payload.meshTag && payload.meshTag) {
+                                mesh = $scope.scene.getMeshesByTags(payload.meshTag);
+                            }
                             else {
-                                logError("The meshName or meshId should be specified");
+                                if (required) {
+                                    logError("The meshName or meshId should be specified");
+                                }
                             }
             
                             if (mesh) {
@@ -249,14 +259,15 @@ https://doc.babylonjs.com/divingDeeper/tags
                             }
                             
                             if (required && meshes.length === 0) {
-                                logError("No mesh found with the specified id/name");
+                                logError("No meshes found with the specified id/name");
                             }
                             
                             return meshes;
                         }
                         
-                        function getLight(payload, required) {
+                        function getLights(payload, required) {
                             var light;
+                            var lights = [];
 
                             if (payload.lightName && payload.lightName !== "") {
                                 light = $scope.scene.getLightByName(payload.lightName);
@@ -265,20 +276,25 @@ https://doc.babylonjs.com/divingDeeper/tags
                                 light = $scope.scene.getLightByID(payload.lightId);
                             }
                             else {
-                                logError("The lightName or lightId should be specified");
-                                return null;
+                                if (required) {
+                                    logError("The lightName or lightId should be specified");
+                                }
                             }
                             
-                            if (!light && required) {
-                                logError("No light found with the specified id/name");
-                                return null;
+                            if (light) {
+                                lights.push(light);
                             }
                             
-                            return light;
+                            if (required && lights.length === 0) {
+                                logError("No lights found with the specified id/name");
+                            }
+                            
+                            return lights;
                         }
 
-                        function getMaterial(payload, required) {
+                        function getMaterials(payload, required) {
                             var material;
+                            var materials = [];
 
                             if (payload.materialName && payload.materialName !== "") {
                                 material = $scope.scene.getMaterialByName(payload.materialName);
@@ -288,15 +304,23 @@ https://doc.babylonjs.com/divingDeeper/tags
                             }
                             else {
                                 logError("The materialName or materialId should be specified");
-                                return null;
                             }
                             
-                            if (!material && required) {
-                                logError("No material found with the specified id/name");
-                                return null;
+                            if (material) {
+                                materials.push(material);
                             }
                             
-                            return material;
+                            if (required && materials.length === 0) {
+                                if (required) {
+                                    logError("No materials found with the specified id/name");
+                                }
+                            }
+                            
+                            return materials;
+                        }
+                        
+                        function getCameras(payload, required) {
+                            return []; // TODO
                         }
 
                         function getVector(payload, fieldName, required) {
@@ -333,6 +357,9 @@ https://doc.babylonjs.com/divingDeeper/tags
                         }
                         
                         function applyActionToScene(actionTrigger, payloadToSend, topicToSend) {
+                            payloadToSend = payloadToSend || "";
+                            topicToSend = topicToSend || "";
+
                             // An action manager is required on the mesh, in order to be able to execute actions
                             if (!$scope.scene.actionManager) {
                                 $scope.scene.actionManager = new BABYLON.ActionManager($scope.scene);
@@ -370,6 +397,9 @@ https://doc.babylonjs.com/divingDeeper/tags
                         }
                         
                         function applyActionToMesh(mesh, actionTrigger, payloadToSend, topicToSend) {
+                            payloadToSend = payloadToSend || "";
+                            topicToSend = topicToSend || "";
+                            
                             // An action manager is required on the mesh, in order to be able to execute actions
                             if (!mesh.actionManager) {
                                 mesh.actionManager = new BABYLON.ActionManager($scope.scene);
@@ -434,33 +464,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                 )
                             );
                         }
-                        
-                        function applyAction(selectorType, selector, actionTrigger, payloadToSend, topicToSend) {
-                            payloadToSend = payloadToSend || "";
-                            topicToSend = topicToSend || "";
 
-                            switch(selectorType) {
-                                case "scene":
-                                    applyActionToScene(actionTrigger, payloadToSend, topicToSend);
-                                    break;
-                                case "meshid":
-                                    meshes = getMeshes({meshId: selector}, true);
-                                    
-                                    meshes.forEach(function (meshForAction) {
-                                        applyActionToMesh(meshForAction, actionTrigger, payloadToSend, topicToSend);
-                                    });
-                                    break;
-                                case "tag":
-                                // TODO getMeshesByTags nog implementeren !!!!!!!!!!!
-                                    var taggedMeshes = getMeshesByTags(selector);
-                                    
-                                    taggedMeshes.forEach(function (taggedMesh, index) {
-                                        applyActionToMesh(taggedMesh, actionTrigger, payloadToSend, topicToSend);
-                                    });
-                                    break;
-                            }
-                        }
-                        
                         function sendMessageProperties(mesh) {
                             var boundingBox = mesh.getBoundingInfo().boundingBox;
     
@@ -566,7 +570,34 @@ https://doc.babylonjs.com/divingDeeper/tags
                             }
                         }
                         
-                        function createAnimation(animationName, animatedMeshId, animatedProperty, frameRate, propertyType, loopMode, loop, startFrame, startTime, endFrame, endTime, keyFrames) {
+                        function updateLight(payload, light) {
+                            var diffuseColor = getRgbColor(payload, "diffuseColor", false);
+                            if (diffuseColor) {
+                                light.diffuse = diffuseColor;
+                            }
+                            
+                            var specularColor = getRgbColor(payload, "specularColor", false);
+                            if (specularColor) {
+                                light.specular = specularColor;
+                            }
+
+                            if (payload.enableLight !== undefined && typeof payload.enableLight === "boolean") {
+                                // Switch the light on or off
+                                light.setEnabled(payload.enableLight);
+                            }
+                            
+                            if (payload.lightIntensity !== undefined && !isNaN(payload.lightIntensity)) {
+                                // Dim or brighten the light
+                                light.intensity = payload.lightIntensity;
+                            }
+                            
+                            if (payload.lightRange !== undefined && !isNaN(payload.lightRange)) {
+                                // Set how far the light reaches.  Note: this is only available for point and spot lights.
+                                light.range = payload.lightRange;
+                            }
+                        }
+                        
+                        function createAnimation(animationName, animatedMeshId, animatedProperty, frameRate, propertyType, loopMode, loop, startFrame, startTime, endFrame, endTime, keyFrames, autoStart) {
                             propertyType = propertyType.toUpperCase();
                             loopMode = loopMode.toUpperCase();
                             
@@ -591,7 +622,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                     propertyType = BABYLON.Animation.ANIMATIONTYPE_VECTOR3;
                                     break;
                                 default:
-                                    console.log("The specified property type is not supported");
+                                    logError("The specified property type is not supported");
                                     return;
                             }
 
@@ -606,7 +637,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                     loopMode = BABYLON.Animation.ANIMATIONLOOPMODE_RELATIVE;
                                     break;
                                 default:
-                                    console.log("The specified loop mode is not supported");
+                                    logError("The specified loop mode is not supported");
                                     return;
                             }
 
@@ -638,7 +669,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         // TODO convert keyFrame.value
                                         break;
                                     default:
-                                        console.log("The specified property type is not supported");
+                                        logError("The specified property type is not supported");
                                         return;
                                 }
                             });
@@ -663,13 +694,15 @@ https://doc.babylonjs.com/divingDeeper/tags
                                 animation.setKeys(keyFrames);
 
                                 meshToAnimate.animations.push(animation);
-
-                                $scope.scene.beginAnimation(meshToAnimate, startFrame, endFrame, loop);
+                                
+                                if (autoStart) {
+                                    $scope.scene.beginAnimation(meshToAnimate, startFrame, endFrame, loop);
+                                }
                             });
                         }
                         
                         function processCommand(payload, topic){
-                            var mesh, meshes, light, material, camera;
+                            var mesh, meshes, light, lights, material, materials, camera, cameras, nodes;
                             var name = "";
                             var options = {};
                             var position, direction, alpha, beta, radius, degrees, radians;
@@ -788,6 +821,11 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         // If any properties have been specified in the message, apply those immediately to the new mesh
                                         updateMesh(payload, mesh);
                                         
+                                        // Apply all the actions that have been specified in the node's config screen, to the newly created mesh
+                                        $scope.config.actions.forEach(function (action, index) {
+                                            applyActionToMesh(mesh, action.trigger, action.payload, action.topic);
+                                        });
+                                        
                                         break;
                                     case "update_mesh":
                                         meshes = getMeshes(payload, true);
@@ -839,83 +877,58 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         });
                                         break;
                                     case "create_light":
-                                    case "update_light":
-                                        light = getLight(payload, true);
+                                        if (!payload.lightType || (typeof payload.lightType !== "string") ) {
+                                            logError("The payload should contain a 'lightType'");
+                                            return;
+                                        }
                                         
-                                        if (command === "create_light") {
-                                            if (!payload.lightType || (typeof payload.lightType !== "string") ) {
-                                                logError("The payload should contain a 'lightType'");
-                                                return;
-                                            }
-                                            
-                                            if (payload.lightName) {
-                                                lightName = payload.lightName;
-                                            }
-                                            
-                                            if (light) {
-                                                // If a light already exist with the same name or id, then remove it
-                                                light.dispose();
-                                            }
+                                        if (payload.lightName) {
+                                            lightName = payload.lightName;
+                                        }
+                                        
+                                        /*TODOif (light) {
+                                            // If a light already exist with the same name or id, then remove it
+                                            light.dispose();
+                                        }*/
 
-                                            switch (payload.lightType) {
-                                                case "pointLight":
-                                                    position = getVector(payload, "position", true);
-                                                    if (position) {
-                                                        light = new BABYLON.PointLight(lightName, position, $scope.scene);
-                                                    }
-                                                    break;
-                                                case "directionalLight":
-                                                    direction = getVector(payload, "direction", true);
-                                                    if (direction) {
-                                                        light = new BABYLON.DirectionalLight(lightName, direction, $scope.scene);
-                                                    }
-                                                    break;
-                                                case "spotLight":
-                                                    position = getVector(payload, "position", true);
-                                                    direction = getVector(payload, "direction", true);
-                                                    if (position && direction) {
-                                                        light = new BABYLON.SpotLight(lightName, new BABYLON.Vector3(position.x, position.y, position.z), new BABYLON.Vector3(direction.x, direction.y, direction.z), Math.PI / 3, 2, $scope.scene);
-                                                    }
-                                                    break;
-                                                case "hemiLight":
-                                                    direction = getVector(payload, "direction", true);
-                                                    if (direction) {
-                                                        light = new BABYLON.HemisphericLight(lightName, new BABYLON.Vector3(direction.x, direction.y, direction.z), $scope.scene);
-                                                    }
-                                                    break;
-                                            }
-                                        }
-                                        else {
-                                            if (!light) {
-                                                console.log("There is no light with the specified id/name");
-                                                return;
-                                            }
+                                        switch (payload.lightType) {
+                                            case "pointLight":
+                                                position = getVector(payload, "position", true);
+                                                if (position) {
+                                                    light = new BABYLON.PointLight(lightName, position, $scope.scene);
+                                                }
+                                                break;
+                                            case "directionalLight":
+                                                direction = getVector(payload, "direction", true);
+                                                if (direction) {
+                                                    light = new BABYLON.DirectionalLight(lightName, direction, $scope.scene);
+                                                }
+                                                break;
+                                            case "spotLight":
+                                                position = getVector(payload, "position", true);
+                                                direction = getVector(payload, "direction", true);
+                                                if (position && direction) {
+                                                    light = new BABYLON.SpotLight(lightName, new BABYLON.Vector3(position.x, position.y, position.z), new BABYLON.Vector3(direction.x, direction.y, direction.z), Math.PI / 3, 2, $scope.scene);
+                                                }
+                                                break;
+                                            case "hemiLight":
+                                                direction = getVector(payload, "direction", true);
+                                                if (direction) {
+                                                    light = new BABYLON.HemisphericLight(lightName, new BABYLON.Vector3(direction.x, direction.y, direction.z), $scope.scene);
+                                                }
+                                                break;
                                         }
                                         
-                                        diffuseColor = getRgbColor(payload, "diffuseColor", false);
-                                        if (diffuseColor) {
-                                        	light.diffuse = diffuseColor;
+                                        if (light) {
+                                            updateLight(payload, light);
                                         }
+                                        break;
+                                    case "update_light":    
+                                        lights = getLights(payload, true);
                                         
-                                        specularColor = getRgbColor(payload, "specularColor", false);
-                                        if (specularColor) {
-                                        	light.specular = specularColor;
-                                        }
-
-                                        if (payload.enableLight !== undefined && typeof payload.enableLight === "boolean") {
-                                            // Switch the light on or off
-                                            light.setEnabled(payload.enableLight);
-                                        }
-                                        
-                                        if (payload.lightIntensity !== undefined && !isNaN(payload.lightIntensity)) {
-                                            // Dim or brighten the light
-                                            light.intensity = payload.lightIntensity;
-                                        }
-                                        
-                                        if (payload.lightRange !== undefined && !isNaN(payload.lightRange)) {
-                                            // Set how far the light reaches.  Note: this is only available for point and spot lights.
-                                            light.range = payload.lightRange;
-                                        }
+                                        meshes.forEach(function (lightToUpdate) {
+                                            updateLight(payload, lightToUpdate);
+                                        });
                                         break;
                                     case "create_material":
                                         if (!payload.materialName) {
@@ -936,28 +949,36 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         });
                                         break;
                                     case "update_material":
-                                        material = getMaterial(payload, true);
+                                        materials = getMaterials(payload, true);
 
-                                        if (material) {
+                                        materials.forEach(function (materialToUpdate) {
                                             // Update the material with settings from the input message
-                                            updateMaterial(payload, material);
+                                            updateMaterial(payload, materialToUpdate);
                                             
                                             // When an (optional) mesh name/id is specified, then apply the material immediately to that mesh
                                             meshes = getMeshes(payload, false);
                                             meshes.forEach(function (meshToUpdate) {
-                                                meshToUpdate.material = material;
+                                                meshToUpdate.material = materialToUpdate;
                                             });
-                                        }
+                                        });
                                         break;
                                     case "apply_mesh_material":
                                         meshes = getMeshes(payload, true);
                                         
                                         if (meshes.length > 0) {
-                                            material = getMaterial(payload, true);
+                                            materials = getMaterials(payload, true);
                                             
-                                            meshes.forEach(function (meshToUpdate) {
-                                                meshToUpdate.material = material;
-                                            });
+                                            if (materials.length > 1) {
+                                                logError("Multiple materials found, but only first one can be applied");
+                                            }
+                                            
+                                            if (materials.length > 0) {
+                                                material = materials[0];
+                                            
+                                                meshes.forEach(function (meshToUpdate) {
+                                                    meshToUpdate.material = material;
+                                                });
+                                            }
                                         }
                                         break;
                                     case "update_mesh_material":
@@ -971,23 +992,99 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         });
                                         break;
                                     case "add_mesh_action":
-                                        var actionTrigger;
+                                        var selector;
                                         
                                         if (!payload.actionTrigger || payload.actionTrigger === "" || (typeof payload.actionTrigger !== "string")) {
                                             logError("The payload should contain an actionTrigger");
                                             return;
                                         }
+
+                                        meshes = getMeshes({meshId: selector}, true);
                                         
-                                        if (payload.selectorType !== "scene" || payload.selectorType !== "meshid" || payload.selectorType !== "tag") {
+                                        meshes.forEach(function (meshForAction) {
+                                            applyActionToMesh(meshForAction, actionTrigger, payloadToSend, topicToSend);
+                                        });
+                                        break;
+                                    case "add_scene_action":
+                                        if (!payload.actionTrigger || payload.actionTrigger === "" || (typeof payload.actionTrigger !== "string")) {
                                             logError("The payload should contain an actionTrigger");
                                             return;
                                         }
-
-                                        applyAction(payload.selectorType, payload.selector, payload.actionTrigger, payload.payloadToSend, payload.topicToSend);
+                                        
+                                        applyActionToScene(payload.actionTrigger, payload.payloadToSend, payload.topicToSend);
                                         break;
                                     case "create_animation":
                                         createAnimation(payload.animationName, payload.animatedMesh, payload.animatedProperty, payload.frameRate, payload.propertyType,
-                                        payload.loopMode, payload.loop, payload.startFrame, payload.startTime, payload.endFrame, payload.endTime, payload.keyFrames);
+                                        payload.loopMode, payload.loop, payload.startFrame, payload.startTime, payload.endFrame, payload.endTime, payload.keyFrames, payload.autoStart);
+                                        break;
+                                    case "start_animation":
+                                    case "restart_animation":
+                                    case "pause_animation":
+                                    case "stop_animation":
+                                    case "reset_animation":
+                                        meshes = getMeshes(payload, false);
+                                        lights = getLights(payload, false);
+                                        cameras = getCameras(payload, false);
+                                        
+                                        // Meshes, lights and camera's are all nodes (which can have animations).  So create 1 array of nodes.
+                                        nodes = meshes.concat(lights, cameras);
+                                        
+                                        if (nodes.length === 0) {
+                                            logError("No nodes (meshes, lights, camera's) found to apply the material on");
+                                        }
+                                       
+                                        nodes.forEach(function(node) {
+                                            // As soon as an Animation is started (not created!), an animatable instance will be created in the scene.
+                                            // The animatable instance stores the actual running animation instance(s) of 1 node (i.e. mesh, light, camera).
+                                            // When the animation has not been started yet at this point, there will be no animatable yet!
+                                            var animatable = $scope.scene.getAnimatableByTarget(node);
+
+                                            //
+                                            switch (command) {
+                                                case "start_animation":
+                                                    if (payload.startFrame == undefined || isNaN(payload.startFrame)) {
+                                                        logError("No startFrame number available in the message");
+                                                    }
+                                                    else if (payload.endFrame == undefined || isNaN(payload.endFrame)) {
+                                                        logError("No endFrame number available in the message");
+                                                    }
+                                                    else {
+                                                        // Since there is no animatable yet, this means the animation has not been started yet.
+                                                        // Which means that the animations on the node need to be started for the first time.
+                                                        // P.S. when payload.loop is not available, then we consider it as 'false'
+                                                        $scope.scene.beginAnimation(node, payload.startFrame, payload.endFrame, payload.loop);
+                                                    }
+                                                    break;
+                                                case "restart_animation":
+                                                    if (animatable) {
+                                                        // Restart all the runtime animations (of the node) available in the animatable
+                                                        animatable.restart();
+                                                    }
+                                                    else {
+                                                        logError("No animatables available for the specified node, so no animations that are current paused");
+                                                    }
+                                                    break;
+                                                case "pause_animation":
+                                                    if (animatable) {
+                                                        animatable.pause();
+                                                    }
+                                                    break;
+                                                case "stop_animation":
+                                                    if (animatable) {
+                                                        // Stop all the runtime animations (of the node) available in the animatable.
+                                                        // When an animation is stopped, the runtime animation instance will also be removed.
+                                                        // And then related animatable instance will also be removed.
+                                                        animatable.stop();
+                                                    }
+                                                    break;
+                                                case "reset_animation":
+                                                    if (animatable) {
+                                                        // Reset (to the original property value) all the runtime animations (of the node) available in the animatable
+                                                        animatable.reset();
+                                                    }
+                                                    break;
+                                            }
+                                        });
                                         break;
                                     case "create_camera":
                                         if (!payload.cameraType || (typeof payload.cameraType !== "string") ) {
@@ -1131,6 +1228,14 @@ https://doc.babylonjs.com/divingDeeper/tags
                                     //    var serializedMesh = BABYLON.SceneSerializer.SerializeMesh(mesh);
                                     //    $scope.serializedMesh = JSON.stringify(serializedMesh);
                                     //    break;
+                                    case "add_glow_layer":
+                                        var glowLayer = new BABYLON.GlowLayer("glow", $scope.scene);
+                                        
+                                        if (payload.colorIntensity !== undefined && !isNaN(payload.colorIntensity)) {
+                                            // Control the intensity of the color in the glow layer
+                                            glowLayer.intensity = payload.colorIntensity;
+                                        }
+
                                     default:
                                         logError("Unsupported command '" + payload.command + "'");
                                 }
@@ -1171,9 +1276,34 @@ https://doc.babylonjs.com/divingDeeper/tags
                                 }
                             }, 100);
 
-                            // Apply all the actions that have been specified in the node's config screen
+                            // Apply all the actions that have been specified in the node's config screen, to the scene and the loaded meshes
                             $scope.config.actions.forEach(function (action, index) {
-                                applyAction(action.selectorType, action.selector, action.action, action.payload, action.topic);
+                                if (action.selectorType === "scene") {
+                                    applyActionToScene(action.trigger, action.payload, action.topic);
+                                }
+                                else {
+                                    var payload = {};
+                                    
+                                    // Construct a virtual payload with the correct fields
+                                    switch (action.selectorType) {
+                                        case "meshTag":
+                                            payload.meshTag = action.selector;
+                                            break;
+                                        case "meshName":
+                                        case "json": // Array of mesh names
+                                            payload.meshName = action.selector;
+                                            break;
+                                        case "meshId":
+                                            payload.meshId = action.selector;
+                                            break;
+                                    }
+                                    
+                                    var meshes = getMeshes(payload, true);
+                                        
+                                    meshes.forEach(function(meshForAction) {
+                                        applyActionToMesh(meshForAction, action.trigger, action.payload, action.topic);
+                                    });
+                                }
                             });
                         }
                         
@@ -1201,7 +1331,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                     $scope.engine = null;
                                 }
                             });
-         
+
                             // Start loading the scene asynchronous after 100 milliseconds.  This way the canvas will have
                             // its real size to fit into the parent div.  Otherwise the canvas will appear small (300 x 150)
                             // in the upper left of the screen, with a BabylonJs loading indicator that is much too large.
@@ -1214,6 +1344,9 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         $scope.scene = null;
                                     }
                                     
+                                    // Don't add this simply as a prefix for the filename!
+                                    // Because then all other files (e.g. texture file called from the gltf file) will be loaded
+                                    // without that prefix.  Instead we set the base url, which is applied by BabylonJs to all the urls.
                                     BABYLON.Tools.BaseUrl = "ui_babylonjs/" + $scope.config.id + "/scene/";
 
                                     BABYLON.SceneLoader.Load("", $scope.config.filename, $scope.engine,
@@ -1223,7 +1356,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                     /*onProgress*/function (event) {
                                     },
                                     /*onError*/function (scene, message, exception) {
-                                        console.log("Unable to load the file into the scene");
+                                        logError("Unable to load the file into the scene");
                                         // Unable to load the scene file from the server, so start with a new scene from scratch
                                         setupScene(null);
                                     });
@@ -1232,7 +1365,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                     // No scene filename has been specified, so start with a new scene from scratch
                                     setupScene(null);
                                 }
-                            }, 100);
+                            }, 200);
                         }
 
                         $scope.$watch('msg', function(msg) {
@@ -1318,7 +1451,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                         res.sendFile(pepJsPath);
                         break;
                     default:
-                        console.log("Unknown resource " + req.params[0]);
+                        logError("Unknown resource " + req.params[0]);
                         res.status(404).json('Unknown resource');                
                 }
                 break;
@@ -1326,19 +1459,19 @@ https://doc.babylonjs.com/divingDeeper/tags
                 var node = RED.nodes.getNode(req.params.nodeid);
                 
                 if (!node) {
-                    console.log("Unknown node with id " + req.params.nodeid);
+                    logError("Unknown node with id " + req.params.nodeid);
                     res.status(404).json('Unknown node id');
                     return;
                 }
 
                 if (!node.folder || node.folder === "") {
-                    console.log("No folder is specified in node with id " + req.params.nodeid);
+                    logError("No folder is specified in node with id " + req.params.nodeid);
                     res.status(404).json('No folder');
                     return;
                 }
                     
                 if (!node.folder || node.folder === "") {
-                    console.log("No folder is specified in node with id " + req.params.nodeid);
+                    logError("No folder is specified in node with id " + req.params.nodeid);
                     res.status(404).json('No folder');
                     return;
                 }
@@ -1353,14 +1486,14 @@ https://doc.babylonjs.com/divingDeeper/tags
                         fullPath = path.join(fullPath, req.params[0]);
                     }
                     else {
-                        console.log("The path (" + fullPath + ") is a directory instead of a file");
+                        logError("The path (" + fullPath + ") is a directory instead of a file");
                         res.status(404).json('Directory instead of file');
                         return;
                     }
                 }
                 
                 if (!fs.existsSync(fullPath)) {
-                    console.log("The file (" + fullPath + ") does not exist");
+                    logError("The file (" + fullPath + ") does not exist");
                     res.status(404).json('Unexisting file');
                     return;
                 }
@@ -1369,7 +1502,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                 res.sendFile(fullPath);
                 break;
             default:
-                console.log("The category (" + req.params.category + ") in the url is not supported");
+                logError("The category (" + req.params.category + ") in the url is not supported");
                 res.status(404).json('Unknown category');
         }
     });
