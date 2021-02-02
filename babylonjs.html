@@ -35,7 +35,8 @@
             folder: {value: ''},
             filename: {value: ''},
             outputField: {value: "payload"},
-            actions: {value: []}
+            actions: {value: []},
+            showBrowserErrors: {value: true}
         },
         inputs:1,
         outputs:1,
@@ -88,8 +89,8 @@
                 label: "Action"
             });
             node.tabs.addTab({
-                id: "node-babylonjs-tab-animations",
-                label: "Animation"
+                id: "node-babylonjs-tab-settings",
+                label: "Settings"
             });
             
             // Custom typedInput definitions
@@ -99,22 +100,19 @@
                hasValue: false
             }
             var meshIdTypeDefinition = {
-               value: "meshid",
-               label: "Mesh",
-               hasValue: true,
-               type: "string"
+               value: "meshId",
+               label: "Id",
+               hasValue: true
             }
-            var meshIdArrayTypeDefinition = {
-               value: "meshidArray",
-               label: "Mesh[]",
-               hasValue: true,
-               type: "json"
+            var meshNameTypeDefinition = {
+               value: "meshName",
+               label: "Name",
+               hasValue: true
             }
             var tagTypeDefinition = {
-               value: "tag",
+               value: "meshTag",
                label: "Tag",
-               hasValue: true,
-               type: "string"
+               hasValue: true
             }            
 
             // Create a table of (scene or mesh) actions
@@ -127,7 +125,7 @@
                    "<div style='width:23%; margin-left:4px; display: inline-grid' id='node-input-columnPayload'><b>msg.payload</b></div>" +
                    "<div style='width:23%; margin-left:-3px; display: inline-grid'><b>msg.topic</b></div>")),
                 addItem: function(container, i, action) {
-                    var actionField;
+                    var triggerField;
                 
                     // Add a new row to the editableList
                     var row = $('<div/>').appendTo(container);
@@ -135,43 +133,46 @@
                     // Column 1 : Add an input field (type string) to the new row, that represents the selector for this action to operate on.
                     // TODO for scene actions, this field should be disabled
                     var selectorField = $('<input/>',{class:"node-input-action-selector",type:"text",placeholder:"Mesh selector"}).css({"width":"24%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
-                    selectorField.typedInput({types: [sceneTypeDefinition, meshIdTypeDefinition, meshIdArrayTypeDefinition, tagTypeDefinition]});
+                    // The type "json" allows an array of mesh names to be specified
+                    selectorField.typedInput({types: [sceneTypeDefinition, meshIdTypeDefinition, meshNameTypeDefinition, "json", tagTypeDefinition]});
                     selectorField.typedInput("type", action.selectorType);
                     selectorField.typedInput("value", action.selector);
                     selectorField.on('change', function(){
-                        actionField.empty();
+                        triggerField.empty();
                     
                         // The available actions depend on the selector type
                         switch ( selectorField.typedInput("type")) {
                             case "scene":
-                                $('<option/>', {value: "everyFrame"       , text: "Every frame"}).appendTo(actionField);
-                                $('<option/>', {value: "keyDown"          , text: "Key down"}).appendTo(actionField);
-                                $('<option/>', {value: "keyUp"            , text: "Key up"}).appendTo(actionField);
+                                $('<option/>', {value: "everyFrame"       , text: "Every frame"}).appendTo(triggerField);
+                                $('<option/>', {value: "keyDown"          , text: "Key down"}).appendTo(triggerField);
+                                $('<option/>', {value: "keyUp"            , text: "Key up"}).appendTo(triggerField);
                                 break;
-                            case "meshid":
-                            case "tag":
-                                $('<option/>', {value: "nothing"           , text: "Nothing"}).appendTo(actionField);
-                                $('<option/>', {value: "pick"              , text: "Pick"}).appendTo(actionField);
-                                $('<option/>', {value: "doublePick"        , text: "Double pick"}).appendTo(actionField);
-                                $('<option/>', {value: "pickDown"          , text: "Pick down"}).appendTo(actionField);
-                                $('<option/>', {value: "pickUp"            , text: "Pick up"}).appendTo(actionField);
-                                $('<option/>', {value: "pickOut"           , text: "Pick out"}).appendTo(actionField);
-                                $('<option/>', {value: "leftPick"          , text: "Left pick"}).appendTo(actionField);
-                                $('<option/>', {value: "rightPick"         , text: "Right pick"}).appendTo(actionField);
-                                $('<option/>', {value: "centerPick"        , text: "Center pick"}).appendTo(actionField);
-                                $('<option/>', {value: "pointerOver"       , text: "Pointer over"}).appendTo(actionField);
-                                $('<option/>', {value: "pointerOut"        , text: "Pointer out"}).appendTo(actionField);
-                                $('<option/>', {value: "intersectionEnter" , text: "Intersect enter"}).appendTo(actionField);
-                                $('<option/>', {value: "intersectionExit"  , text: "Intersect exit"}).appendTo(actionField);
+                            case "meshId":
+                            case "meshName":
+                            case "json":
+                            case "meshTag":
+                                $('<option/>', {value: "nothing"           , text: "Nothing"}).appendTo(triggerField);
+                                $('<option/>', {value: "pick"              , text: "Pick"}).appendTo(triggerField);
+                                $('<option/>', {value: "doublePick"        , text: "Double pick"}).appendTo(triggerField);
+                                $('<option/>', {value: "pickDown"          , text: "Pick down"}).appendTo(triggerField);
+                                $('<option/>', {value: "pickUp"            , text: "Pick up"}).appendTo(triggerField);
+                                $('<option/>', {value: "pickOut"           , text: "Pick out"}).appendTo(triggerField);
+                                $('<option/>', {value: "leftPick"          , text: "Left pick"}).appendTo(triggerField);
+                                $('<option/>', {value: "rightPick"         , text: "Right pick"}).appendTo(triggerField);
+                                $('<option/>', {value: "centerPick"        , text: "Center pick"}).appendTo(triggerField);
+                                $('<option/>', {value: "pointerOver"       , text: "Pointer over"}).appendTo(triggerField);
+                                $('<option/>', {value: "pointerOut"        , text: "Pointer out"}).appendTo(triggerField);
+                                $('<option/>', {value: "intersectionEnter" , text: "Intersect enter"}).appendTo(triggerField);
+                                $('<option/>', {value: "intersectionExit"  , text: "Intersect exit"}).appendTo(triggerField);
                                 break;
                         }
                     });
                     
-                    // Column 2 : Add an input field (type option) to the new row, that represents the action type 
-                    actionField = $('<select/>',{class:"node-input-action-action",type:"text",placeholder:"click"}).css({"width":"22%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
-                    actionField.val(action.action || "pick");
+                    // Column 2 : Add an input field (type option) to the new row, that represents the trigger type 
+                    triggerField = $('<select/>',{class:"node-input-action-trigger",type:"text",placeholder:"click"}).css({"width":"22%","margin-left":"5px","margin-right":"5px"}).appendTo(row);
+                    triggerField.val(action.trigger || "pick");
 
-                    // Make sure the onchange handler of the selectorField fills the dropdown options of the actionField
+                    // Make sure the onchange handler of the selectorField fills the dropdown options of the triggerField
                     selectorField.change();
 
                     // Column 3 : Add a input field (type string) to the new row, that represents the msg.payload content 
@@ -188,7 +189,7 @@
             // Show all the actions (stored in this node) into the editableList
             if (this.actions) {
                 this.actions.forEach(function (action, index) {
-                    actionsList.editableList('addItem', {selectorType: action.selectorType, selector:action.selector, action:action.action, payload:action.payload, topic:action.topic});
+                    actionsList.editableList('addItem', {selectorType: action.selectorType, selector:action.selector, trigger:action.trigger, payload:action.payload, topic:action.topic});
                 });
             }
             
@@ -210,11 +211,11 @@ debugger
                 var action       = $(this);
                 var selectorType = action.find(".node-input-action-selector").typedInput('type');
                 var selector     = action.find(".node-input-action-selector").typedInput('value');
-                var action       = action.find(".node-input-action-action").val();
+                var trigger      = action.find(".node-input-action-trigger").val();
                 var payload      = action.find(".node-input-action-payload").val();
                 var topic        = action.find(".node-input-action-topic").val();
 
-                node.actions.push({selectorType:selectorType, selector:selector, action:action, payload:payload, topic:topic});
+                node.actions.push({selectorType:selectorType, selector:selector, trigger:trigger, payload:payload, topic:topic});
             });
         }
     });
@@ -269,9 +270,11 @@ debugger
                 <ol id="node-input-actions-container"></ol>
             </div>
         </div>
-        <div id="node-babylonjs-tab-animations">
-            <!-- Table with animations -->
-            <ol id="node-input-actions-container"></ol>
+        <div id="node-babylonjs-tab-settings">
+            <div class="form-row">
+                <input type="checkbox" id="node-input-showBrowserErrors" style="display: inline-block; width: auto; vertical-align: top;">
+                <label for="node-input-showBrowserErrors" style="width:70%;"> Show browser errors on the server</label>
+            </div>
         </div>
     </div>
 </script>
