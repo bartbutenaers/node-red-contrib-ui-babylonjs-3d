@@ -60,6 +60,17 @@ https://doc.babylonjs.com/divingDeeper/tags
     }
     
     // -------------------------------------------------------------------------------------------------
+    // Determining the path to the files in the dependent babylonjs-gui module once.
+    // See https://discourse.nodered.org/t/use-files-from-dependent-npm-module/17978/5?u=bartbutenaers
+    // -------------------------------------------------------------------------------------------------
+    var babylonJsGuiPath = require.resolve("babylonjs-gui");
+
+    if (!fs.existsSync(babylonJsGuiPath)) {
+        console.log("Javascript file " + babylonJsGuiPath + " does not exist");
+        babylonJsGuiPath = null;
+    }
+    
+    // -------------------------------------------------------------------------------------------------
     // Determining the path to the files in the dependent babylonjs-loaders module once.
     // See https://discourse.nodered.org/t/use-files-from-dependent-npm-module/17978/5?u=bartbutenaers
     // -------------------------------------------------------------------------------------------------
@@ -81,6 +92,7 @@ https://doc.babylonjs.com/divingDeeper/tags
         var html = String.raw`
         <script src="ui_babylonjs/null/js/babylon.js"></script>
         <script src="ui_babylonjs/null/js/babylon_loader.js"></script>
+        <script src="ui_babylonjs/null/js/babylon_gui.js"></script>
         <script src="ui_babylonjs/null/js/pep.js"></script>
         <canvas id="babylonjsCanvas_` + config.id.replace(".","_") + `" touch-action="none" style="width:100%; height:100%; touch-action:none;" ng-init='init(` + configAsJson + `)'></div>
         `;
@@ -187,11 +199,11 @@ https://doc.babylonjs.com/divingDeeper/tags
                         if (orig.msg.payload) {
                             newMsg.payload = orig.msg.payload;
                         }                          
-                        if (orig.msg.meshId) {
-                            newMsg.meshId = orig.msg.meshId;
+                        if (orig.msg.id) {
+                            newMsg.id = orig.msg.id;
                         }  
-                        if (orig.msg.meshName) {
-                            newMsg.meshName = orig.msg.meshName;
+                        if (orig.msg.name) {
+                            newMsg.name = orig.msg.name;
                         }
 
                         // In the editableList of the clickable shapes, the content of the node.outputField property has been specified.
@@ -218,19 +230,46 @@ https://doc.babylonjs.com/divingDeeper/tags
                             }
                         }
                         
-                        // Gets the meshes based on meshId, meshName, meshTag
+                        // Check if a (nested) property exists
+                        function checkPropertyExists(obj, propertyName) {
+                            var propertyNames = propertyName.split(".");
+
+                            for (var i = 0; i < propertyNames.length; i++) {
+                                if (!obj || obj[propertyNames[i]] === undefined) {
+                                    return false;
+                                }
+                                obj = obj[propertyNames[i]];
+                            }
+                            return true;
+                        }
+                        
+                        // Get a (nested) property value.  
+                        // Returns a null if the property not exists.
+                        /*function getPropertyValue(obj, propertyName) {
+                            var propertyNames = propertyName.split(".");
+
+                            for (var i = 0; i < propertyNames.length; i++) {
+                                if (!obj || !obj.hasOwnProperty(propertyNames[i])) {
+                                    return null;
+                                }
+                                obj = obj[propertyNames[i]];
+                            }
+                            return obj;
+                        }*/
+                        
+                        // Gets the meshes based on id, name, tag
                         function getMeshes(payload, required) {
                             var mesh;
                             var meshes = [];
 
-                            if (payload.meshName && payload.meshName !== "") {
-                                if (Array.isArray(payload.meshName)) {
-                                    payload.meshName.forEach(function(name) {
+                            if (payload.name && payload.name !== "") {
+                                if (Array.isArray(payload.name)) {
+                                    payload.name.forEach(function(name) {
                                         meshes.push($scope.scene.getMeshByName(name));
                                     });
                                 }
-                                if (payload.meshName.startsWith("^")) {
-                                    var regex = new RegExp(payload.meshName);
+                                if (payload.name.startsWith("^")) {
+                                    var regex = new RegExp(payload.name);
 
                                     $scope.scene.meshes.forEach(function (meshToTest) {
                                         if (meshToTest.name && regex.test(meshToTest.name)) {
@@ -239,18 +278,18 @@ https://doc.babylonjs.com/divingDeeper/tags
                                     });
                                 }
                                 else {
-                                    mesh = $scope.scene.getMeshByName(payload.meshName);
+                                    mesh = $scope.scene.getMeshByName(payload.name);
                                 }
                             }
-                            else if (payload.meshId && payload.meshId !== "") {
-                                mesh = $scope.scene.getMeshByID(payload.meshId);
+                            else if (payload.id && payload.id !== "") {
+                                mesh = $scope.scene.getMeshByID(payload.id);
                             }
-                            else if (payload.meshTag && payload.meshTag) {
-                                mesh = $scope.scene.getMeshesByTags(payload.meshTag);
+                            else if (payload.tag && payload.tag) {
+                                mesh = $scope.scene.getMeshesByTags(payload.tag);
                             }
                             else {
                                 if (required) {
-                                    logError("The meshName or meshId should be specified");
+                                    logError("The name or id of the mesh should be specified");
                                 }
                             }
             
@@ -259,7 +298,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                             }
                             
                             if (required && meshes.length === 0) {
-                                logError("No meshes found with the specified id/name");
+                                logError("No meshes found with the specified name or id");
                             }
                             
                             return meshes;
@@ -269,15 +308,31 @@ https://doc.babylonjs.com/divingDeeper/tags
                             var light;
                             var lights = [];
 
-                            if (payload.lightName && payload.lightName !== "") {
-                                light = $scope.scene.getLightByName(payload.lightName);
+                            if (payload.name && payload.name !== "") {
+                                if (Array.isArray(payload.name)) {
+                                    payload.name.forEach(function(name) {
+                                        lights.push($scope.scene.getLightByName(name));
+                                    });
+                                }
+                                if (payload.name.startsWith("^")) {
+                                    var regex = new RegExp(payload.name);
+
+                                    $scope.scene.lights.forEach(function (lightToTest) {
+                                        if (lightToTest.name && regex.test(lightToTest.name)) {
+                                             lights.push(lightToTest);
+                                        }
+                                    });
+                                }
+                                else {
+                                    light = $scope.scene.getLightByName(payload.name);
+                                }
                             }
-                            else if (payload.lightId && payload.lightId !== "") {
-                                light = $scope.scene.getLightByID(payload.lightId);
+                            else if (payload.id && payload.id !== "") {
+                                light = $scope.scene.getLightByID(payload.id);
                             }
                             else {
                                 if (required) {
-                                    logError("The lightName or lightId should be specified");
+                                    logError("The name or id of the light should be specified");
                                 }
                             }
                             
@@ -286,7 +341,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                             }
                             
                             if (required && lights.length === 0) {
-                                logError("No lights found with the specified id/name");
+                                logError("No lights found with the specified name or id");
                             }
                             
                             return lights;
@@ -296,14 +351,32 @@ https://doc.babylonjs.com/divingDeeper/tags
                             var material;
                             var materials = [];
 
-                            if (payload.materialName && payload.materialName !== "") {
-                                material = $scope.scene.getMaterialByName(payload.materialName);
+                            if (payload.name && payload.name !== "") {
+                                if (Array.isArray(payload.name)) {
+                                    payload.name.forEach(function(name) {
+                                        materials.push($scope.scene.getMeshByName(name));
+                                    });
+                                }
+                                if (payload.name.startsWith("^")) {
+                                    var regex = new RegExp(payload.name);
+
+                                    $scope.scene.materials.forEach(function (materialToTest) {
+                                        if (materialToTest.name && regex.test(materialToTest.name)) {
+                                             materials.push(materialToTest);
+                                        }
+                                    });
+                                }
+                                else {
+                                    material = $scope.scene.getMaterialByName(payload.name);
+                                }
                             }
-                            else if (payload.materialId && payload.materialId !== "") {
-                                material = $scope.scene.getMaterialByID(payload.materialId);
+                            else if (payload.id && payload.id !== "") {
+                                material = $scope.scene.getMaterialByID(payload.id);
                             }
                             else {
-                                logError("The materialName or materialId should be specified");
+                                if(required) {
+                                    logError("The name or id of the material should be specified");
+                                }
                             }
                             
                             if (material) {
@@ -312,15 +385,57 @@ https://doc.babylonjs.com/divingDeeper/tags
                             
                             if (required && materials.length === 0) {
                                 if (required) {
-                                    logError("No materials found with the specified id/name");
+                                    logError("No materials found with the specified name or id");
                                 }
                             }
                             
                             return materials;
                         }
                         
+                        function getGuiControls(payload, required) {
+                            var control;
+                            var controls = [];
+
+                            if (payload.name && payload.name !== "") {
+                                control = BABYLON.GUI.AdvancedDynamicTexture.getControlByName(payload.name);
+                            }
+                            else {
+                                if(required) {
+                                    logError("The name or id of the control should be specified");
+                                }
+                            }
+                            
+                            if (control) {
+                                controls.push(control);
+                            }
+                            
+                            if (required && controls.length === 0) {
+                                if (required) {
+                                    logError("No controls found with the specified name or id");
+                                }
+                            }
+                            
+                            return controls;
+                        }
+                        
                         function getCameras(payload, required) {
                             return []; // TODO
+                        }
+                        
+                        // A node can be a mesh, light or camera
+                        function getNodes(payload, required) {
+                            var meshes = getMeshes(payload, false);
+                            var lights = getLights(payload, false);
+                            var cameras = getCameras(payload, false);
+                            
+                            // Create 1 array with all type of nodes
+                            var nodes = meshes.concat(lights, cameras);
+                            
+                            if (nodes.length === 0 && required) {
+                                logError("No nodes (meshes, lights, camera's) found with the specified name or id");
+                            }
+                            
+                            return nodes;
                         }
 
                         function getVector(payload, fieldName, required) {
@@ -474,9 +589,9 @@ https://doc.babylonjs.com/divingDeeper/tags
                                     id: mesh.id,
                                     name: mesh.name,
                                     edgesColor: {
-                                        r: mesh.edgesColor.r,
-                                        g: mesh.edgesColor.g,
-                                        b: mesh.edgesColor.b,
+                                        r: mesh.edgesColor.r * 255,
+                                        g: mesh.edgesColor.g * 255,
+                                        b: mesh.edgesColor.b * 255
                                     },
                                     outlineWidth: mesh.outlineWidth,
                                     uniqueId: mesh.uniqueId,
@@ -581,131 +696,92 @@ https://doc.babylonjs.com/divingDeeper/tags
                                 light.specular = specularColor;
                             }
 
-                            if (payload.enableLight !== undefined && typeof payload.enableLight === "boolean") {
+                            if (payload.enabled !== undefined && typeof payload.enabled === "boolean") {
                                 // Switch the light on or off
-                                light.setEnabled(payload.enableLight);
+                                light.setEnabled(payload.enabled);
                             }
                             
-                            if (payload.lightIntensity !== undefined && !isNaN(payload.lightIntensity)) {
+                            if (payload.intensity !== undefined && !isNaN(payload.intensity)) {
                                 // Dim or brighten the light
-                                light.intensity = payload.lightIntensity;
+                                light.intensity = payload.intensity;
                             }
                             
-                            if (payload.lightRange !== undefined && !isNaN(payload.lightRange)) {
+                            if (payload.range !== undefined && !isNaN(payload.range)) {
                                 // Set how far the light reaches.  Note: this is only available for point and spot lights.
-                                light.range = payload.lightRange;
+                                light.range = payload.range;
                             }
                         }
                         
-                        function createAnimation(animationName, animatedMeshId, animatedProperty, frameRate, propertyType, loopMode, loop, startFrame, startTime, endFrame, endTime, keyFrames, autoStart) {
-                            propertyType = propertyType.toUpperCase();
-                            loopMode = loopMode.toUpperCase();
+                        function updateGuiControl(payload, control) {
+                            if (typeof payload.isVisible === "boolean") {
+                                control.isVisible = payload.isVisible;
+                            }
                             
-                            // Map the propertyType string to a BabylonJs value
-                            switch(propertyType) {
-                                case "COLOR3":
-                                    propertyType = BABYLON.Animation.ANIMATIONTYPE_COLOR3;
-                                    break;
-                                case "FLOAT":
-                                    propertyType = BABYLON.Animation.ANIMATIONTYPE_FLOAT;
-                                    break;
-                                case "MATRIX":
-                                    propertyType = BABYLON.Animation.ANIMATIONTYPE_MATRIX;
-                                    break;
-                                case "QUATERNION":
-                                    propertyType = BABYLON.Animation.ANIMATIONTYPE_QUATERNION;
-                                    break;
-                                case "VECTOR2":
-                                    propertyType = BABYLON.Animation.ANIMATIONTYPE_VECTOR2;
-                                    break;
-                                case "VECTOR3":
-                                    propertyType = BABYLON.Animation.ANIMATIONTYPE_VECTOR3;
-                                    break;
-                                default:
-                                    logError("The specified property type is not supported");
-                                    return;
-                            }
-
-                            switch (loopMode) {
-                                case "CYCLE":
-                                    loopMode = BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE;
-                                    break;
-                                case "CONSTANT":
-                                    loopMode = BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT;
-                                    break;
-                                case "RELATIVE":
-                                    loopMode = BABYLON.Animation.ANIMATIONLOOPMODE_RELATIVE;
-                                    break;
-                                default:
-                                    logError("The specified loop mode is not supported");
-                                    return;
-                            }
-
-                            // Convert the 'time' fields (in seconds) to 'frame' fields
-                            keyFrames.forEach(function (keyFrame) {
-                                // The 'time' field overrules a 'frame' field, if both fields have been specified
-                                if (keyFrame.time != undefined) {
-                                    keyFrame.frame = keyFrame.time * frameRate;
-                                    delete keyFrame.time;
-                                }
-
-                                switch(propertyType) {
-                                    case BABYLON.Animation.ANIMATIONTYPE_COLOR3:
-                                        keyFrame.value = BABYLON.Color3.FromInts(keyFrame.value.r, keyFrame.value.g, keyFrame.value.b);
+                            // The default horizontal alignment is "center"
+                            if (payload.horizontalAlignment) {
+                                switch (payload.horizontalAlignment) {
+                                    case "left":
+                                        control.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
                                         break;
-                                    case BABYLON.Animation.ANIMATIONTYPE_FLOAT:
-                                        // TODO convert keyFrame.value
+                                    case "right":
+                                        control.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
                                         break;
-                                    case BABYLON.Animation.ANIMATIONTYPE_MATRIX:
-                                        // TODO convert keyFrame.value
-                                        break;
-                                    case BABYLON.Animation.ANIMATIONTYPE_QUATERNION:
-                                        // TODO convert keyFrame.value
-                                        break;
-                                    case BABYLON.Animation.ANIMATIONTYPE_VECTOR2:
-                                        // TODO convert keyFrame.value
-                                        break;
-                                    case BABYLON.Animation.ANIMATIONTYPE_VECTOR3:
-                                        // TODO convert keyFrame.value
+                                    case "center":
+                                        control.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
                                         break;
                                     default:
-                                        logError("The specified property type is not supported");
-                                        return;
+                                        logError("The specified horizontAlignment value is not supported");
                                 }
-                            });
-                            
-                            // A startTime overrules the startFrame, when both fields have been specified
-                            if(startTime != undefined) {
-                                // Convert the start time (in seconds) to the start frame
-                                startFrame = startTime * frameRate;
+                            }
+                           
+                            // The default vertical alignment is "center"
+                            if (payload.verticalAlignment) {
+                                switch (payload.verticalAlignment) {
+                                    case "top":
+                                        control.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+                                        break;
+                                    case "bottom":
+                                        control.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+                                        break;
+                                    case "center":
+                                        control.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+                                        break;
+                                    default:
+                                        logError("The specified verticalAlignment value is not supported");
+                                }
+                            }
+
+                            // The default height is 200%
+                            if (!isNaN(payload.height)) {
+                                control.height = payload.height + "px";
                             }
                             
-                            // An endTime overrules the endFrame, when both fields have been specified
-                            if(endTime != undefined) {
-                                // Convert the start time (in seconds) to the start frame
-                                endFrame = endTime * frameRate;
+                            // The default width is 200%
+                            if (!isNaN(payload.width)) {
+                                control.width = payload.width + "px";
                             }
-                            
-                            var meshes = getMeshes({meshId: animatedMeshId}, true);
-
-                            meshes.forEach(function (meshToAnimate) {
-                                var animation = new BABYLON.Animation(animationName, animatedProperty, frameRate, propertyType, loopMode);
-
-                                animation.setKeys(keyFrames);
-
-                                meshToAnimate.animations.push(animation);
-                                
-                                if (autoStart) {
-                                    $scope.scene.beginAnimation(meshToAnimate, startFrame, endFrame, loop);
-                                }
+                          
+                            control.onValueChangedObservable.add(function(value) {
+                                // Meshes, lights and camera's are all nodes (on which we can set a property value).
+                                // Now we search on the target name or id.
+                                var targetNodes = getNodes({name: payload.targetName, id: payload.targetId}, true);
+                                       
+                                targetNodes.forEach(function(targetNode) {
+                                    if (targetNode.hasOwnProperty(payload.targetProperty)) {
+                                        targetNode[payload.targetProperty].copyFrom(value);
+                                    }
+                                    else {
+                                        logError("The target node doesn't has the specified target property");
+                                    }                                        
+                                });
                             });
                         }
-                        
+
                         function processCommand(payload, topic){
-                            var mesh, meshes, light, lights, material, materials, camera, cameras, nodes;
+                            var mesh, meshes, light, lights, material, materials, camera, cameras, nodes, control, controls;
                             var name = "";
                             var options = {};
-                            var position, direction, alpha, beta, radius, degrees, radians;
+                            var position, direction, alpha, beta, radius, degrees, radians, parentContainer;
                             var diffuseColor, specularColor, emissiveColor, ambientColor;
                             
                             var command = payload.command.toLowerCase();
@@ -714,21 +790,21 @@ https://doc.babylonjs.com/divingDeeper/tags
                                 debugger;
                                 switch (command) {
                                     case "create_mesh":
-                                        if (!payload.meshType || (typeof payload.meshType !== "string") ) {
+                                        if (!payload.type || (typeof payload.type !== "string") ) {
                                             logError("The payload should contain a meshType");
                                             return;
                                         }
                                         
                                         // TODO check if name is required
-                                        if (payload.meshName) {
-                                            name = payload.meshName;
+                                        if (payload.name) {
+                                            name = payload.name;
                                         }
                                         
                                         if (payload.meshOptions) {
                                             options = payload.meshOptions;
                                         }
 
-                                        switch (payload.meshType) {
+                                        switch (payload.type) {
                                             case "box":
                                                 mesh = BABYLON.MeshBuilder.CreateBox(name, options, $scope.scene);
                                                 break;
@@ -877,13 +953,13 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         });
                                         break;
                                     case "create_light":
-                                        if (!payload.lightType || (typeof payload.lightType !== "string") ) {
-                                            logError("The payload should contain a 'lightType'");
+                                        if (!payload.type || (typeof payload.type !== "string") ) {
+                                            logError("The payload should contain a light 'type'");
                                             return;
                                         }
                                         
-                                        if (payload.lightName) {
-                                            lightName = payload.lightName;
+                                        if (payload.name) {
+                                            lightName = payload.name;
                                         }
                                         
                                         /*TODOif (light) {
@@ -891,7 +967,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                             light.dispose();
                                         }*/
 
-                                        switch (payload.lightType) {
+                                        switch (payload.type) {
                                             case "pointLight":
                                                 position = getVector(payload, "position", true);
                                                 if (position) {
@@ -926,24 +1002,24 @@ https://doc.babylonjs.com/divingDeeper/tags
                                     case "update_light":    
                                         lights = getLights(payload, true);
                                         
-                                        meshes.forEach(function (lightToUpdate) {
+                                        lights.forEach(function (lightToUpdate) {
                                             updateLight(payload, lightToUpdate);
                                         });
                                         break;
                                     case "create_material":
-                                        if (!payload.materialName) {
+                                        if (!payload.name) {
                                             logError("The payload should contain a 'materialName'");
                                             return;
                                         }
 
                                         // Create a new material with the specified name
-                                        material = new BABYLON.StandardMaterial(payload.materialName, $scope.scene);
+                                        material = new BABYLON.StandardMaterial(payload.name, $scope.scene);
                                         
                                         // Update the material with settings from the input message
                                         updateMaterial(payload, material);
                                         
                                         // When an (optional) mesh name/id is specified, then apply the material immediately to that mesh
-                                        meshes = getMeshes(payload, false);
+                                        meshes = getMeshes({name: payload.targetName, id: payload.targetId}, false);
                                         meshes.forEach(function (meshToUpdate) {
                                             meshToUpdate.material = material;
                                         });
@@ -963,7 +1039,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         });
                                         break;
                                     case "apply_mesh_material":
-                                        meshes = getMeshes(payload, true);
+                                        meshes = getMeshes({name: payload.targetName, id: payload.targetId}, true);
                                         
                                         if (meshes.length > 0) {
                                             materials = getMaterials(payload, true);
@@ -982,7 +1058,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         }
                                         break;
                                     case "update_mesh_material":
-                                        meshes = getMeshes(payload, true);
+                                        meshes = getMeshes({name: payload.targetName, id: payload.targetId}, true);
                                         
                                         meshes.forEach(function (meshToUpdate) {
                                             if (meshToUpdate.material) {
@@ -992,14 +1068,12 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         });
                                         break;
                                     case "add_mesh_action":
-                                        var selector;
-                                        
                                         if (!payload.actionTrigger || payload.actionTrigger === "" || (typeof payload.actionTrigger !== "string")) {
                                             logError("The payload should contain an actionTrigger");
                                             return;
                                         }
 
-                                        meshes = getMeshes({meshId: selector}, true);
+                                        meshes = getMeshes(payload, true);
                                         
                                         meshes.forEach(function (meshForAction) {
                                             applyActionToMesh(meshForAction, actionTrigger, payloadToSend, topicToSend);
@@ -1014,24 +1088,129 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         applyActionToScene(payload.actionTrigger, payload.payloadToSend, payload.topicToSend);
                                         break;
                                     case "create_animation":
-                                        createAnimation(payload.animationName, payload.animatedMesh, payload.animatedProperty, payload.frameRate, payload.propertyType,
-                                        payload.loopMode, payload.loop, payload.startFrame, payload.startTime, payload.endFrame, payload.endTime, payload.keyFrames, payload.autoStart);
+                                        var startTime, endTime;
+                                        var propertyType = payload.propertyType.toUpperCase();
+                                        var loopMode = payload.loopMode.toUpperCase();
+                                        
+                                        // Map the propertyType string to a BabylonJs value
+                                        switch(propertyType) {
+                                            case "COLOR3":
+                                                propertyType = BABYLON.Animation.ANIMATIONTYPE_COLOR3;
+                                                break;
+                                            case "FLOAT":
+                                                propertyType = BABYLON.Animation.ANIMATIONTYPE_FLOAT;
+                                                break;
+                                            case "MATRIX":
+                                                propertyType = BABYLON.Animation.ANIMATIONTYPE_MATRIX;
+                                                break;
+                                            case "QUATERNION":
+                                                propertyType = BABYLON.Animation.ANIMATIONTYPE_QUATERNION;
+                                                break;
+                                            case "VECTOR2":
+                                                propertyType = BABYLON.Animation.ANIMATIONTYPE_VECTOR2;
+                                                break;
+                                            case "VECTOR3":
+                                                propertyType = BABYLON.Animation.ANIMATIONTYPE_VECTOR3;
+                                                break;
+                                            default:
+                                                logError("The specified property type is not supported");
+                                                return;
+                                        }
+
+                                        switch (loopMode) {
+                                            case "CYCLE":
+                                                loopMode = BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE;
+                                                break;
+                                            case "CONSTANT":
+                                                loopMode = BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT;
+                                                break;
+                                            case "RELATIVE":
+                                                loopMode = BABYLON.Animation.ANIMATIONLOOPMODE_RELATIVE;
+                                                break;
+                                            default:
+                                                logError("The specified loop mode is not supported");
+                                                return;
+                                        }
+
+                                        if (payload.keyFrames && Array.isArray(payload.keyFrames) && payload.keyFrames.length > 0) {
+                                            // Convert the 'time' fields (in seconds) to 'frame' fields
+                                            payload.keyFrames.forEach(function (keyFrame) {
+                                                // The 'time' field overrules a 'frame' field, if both fields have been specified
+                                                if (keyFrame.time != undefined) {
+                                                    keyFrame.frame = keyFrame.time * payload.frameRate;
+                                                    delete keyFrame.time;
+                                                }
+
+                                                switch(propertyType) {
+                                                    case BABYLON.Animation.ANIMATIONTYPE_COLOR3:
+                                                        keyFrame.value = BABYLON.Color3.FromInts(keyFrame.value.r, keyFrame.value.g, keyFrame.value.b);
+                                                        break;
+                                                    case BABYLON.Animation.ANIMATIONTYPE_FLOAT:
+                                                        // TODO convert keyFrame.value
+                                                        break;
+                                                    case BABYLON.Animation.ANIMATIONTYPE_MATRIX:
+                                                        // TODO convert keyFrame.value
+                                                        break;
+                                                    case BABYLON.Animation.ANIMATIONTYPE_QUATERNION:
+                                                        // TODO convert keyFrame.value
+                                                        break;
+                                                    case BABYLON.Animation.ANIMATIONTYPE_VECTOR2:
+                                                        // TODO convert keyFrame.value
+                                                        break;
+                                                    case BABYLON.Animation.ANIMATIONTYPE_VECTOR3:
+                                                        // TODO convert keyFrame.value
+                                                        break;
+                                                    default:
+                                                        logError("The specified property type is not supported");
+                                                        return;
+                                                }
+                                            });
+                                        }
+                                        else {
+                                            logError("No key frames have been specified for the animation");
+                                            return;
+                                        }
+                                        
+                                        // A startTime overrules the startFrame, when both fields have been specified
+                                        if(payload.startTime != undefined && payload.frameRate != undefined) {
+                                            // Convert the start time (in seconds) to the start frame
+                                            startFrame = payload.startTime * payload.frameRate;
+                                        }
+                                        
+                                        // An endTime overrules the endFrame, when both fields have been specified
+                                        if(endTime != undefined && payload.frameRate != undefined) {
+                                            // Convert the start time (in seconds) to the start frame
+                                            endFrame = endTime * payload.frameRate;
+                                        }
+                                        
+                                        var meshes = getMeshes({name: payload.targetName, id: payload.targetId}, true);
+
+                                        meshes.forEach(function (meshToAnimate) {
+                                            var propertyExists = checkPropertyExists(meshToAnimate, payload.targetProperty);
+                                            
+                                            if (propertyExists) {
+                                                var animation = new BABYLON.Animation(payload.name, payload.targetProperty, payload.frameRate, propertyType, loopMode);
+
+                                                animation.setKeys(payload.keyFrames);
+
+                                                meshToAnimate.animations.push(animation);
+                                                
+                                                if (payload.autoStart) {
+                                                    $scope.scene.beginAnimation(meshToAnimate, payload.startFrame, payload.endFrame, payload.loop);
+                                                }
+                                            }
+                                            else {
+                                                logError("The property cannot be animated, since it doesn't exist in the target mesh");
+                                            }
+                                        });
                                         break;
                                     case "start_animation":
                                     case "restart_animation":
                                     case "pause_animation":
                                     case "stop_animation":
                                     case "reset_animation":
-                                        meshes = getMeshes(payload, false);
-                                        lights = getLights(payload, false);
-                                        cameras = getCameras(payload, false);
-                                        
                                         // Meshes, lights and camera's are all nodes (which can have animations).  So create 1 array of nodes.
-                                        nodes = meshes.concat(lights, cameras);
-                                        
-                                        if (nodes.length === 0) {
-                                            logError("No nodes (meshes, lights, camera's) found to apply the material on");
-                                        }
+                                        nodes = getNodes({name: payload.targetName, id: payload.targetId}, true);
                                        
                                         nodes.forEach(function(node) {
                                             // As soon as an Animation is started (not created!), an animatable instance will be created in the scene.
@@ -1087,14 +1266,14 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         });
                                         break;
                                     case "create_camera":
-                                        if (!payload.cameraType || (typeof payload.cameraType !== "string") ) {
-                                            logError("The payload should contain a cameraType");
+                                        if (!payload.type || (typeof payload.type !== "string") ) {
+                                            logError("The payload should contain a camera type");
                                             return;
                                         }
                                         
                                         // TODO check if name is required
                                         if (payload.name) {
-                                            name = payload.meshName;
+                                            name = payload.name;
                                         }
                                         
                                         position = getVector(payload, "position", true);
@@ -1231,11 +1410,68 @@ https://doc.babylonjs.com/divingDeeper/tags
                                     case "add_glow_layer":
                                         var glowLayer = new BABYLON.GlowLayer("glow", $scope.scene);
                                         
-                                        if (payload.colorIntensity !== undefined && !isNaN(payload.colorIntensity)) {
+                                        if (payload.intensity !== undefined && !isNaN(payload.intensity)) {
                                             // Control the intensity of the color in the glow layer
-                                            glowLayer.intensity = payload.colorIntensity;
+                                            glowLayer.intensity = payload.intensity;
+                                        }
+                                        break;
+                                    case "create_gui_control":
+                                        if (!$scope.fullScreenUI) {
+                                            // Lazy creation of the GUI layer, only when needed
+                                            $scope.fullScreenUI = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
                                         }
 
+                                        // Create a gui control of the specified type
+                                        switch(payload.controlType) {
+                                            case "stackPanel":
+                                                control = new BABYLON.GUI.StackPanel();
+                                                
+                                                if (payload.isVertical == true) {
+                                                    control.isVertical = true;
+                                                }
+                                                break;
+                                            case "textBlock":
+                                                control = new BABYLON.GUI.TextBlock();
+                                                control.text = payload.defaultValue || "";
+                                                break;    
+                                            case "colorPicker":
+                                                control = new BABYLON.GUI.ColorPicker();
+                                                //control.value = skullMaterial.diffuseColor; // TODO
+                                                break;
+                                            default:
+                                                logError("The specified horizontAlignment value is not supported");
+                                        }
+                                        
+                                        if (control) {
+                                            updateGuiControl(payload, control);
+                                            
+                                            // Try to get the parent container control
+                                            parentContainer = getGuiControls({controlName: payload.parentName}, false);
+                                            
+                                            if (parentContainer.length > 0) {
+                                                parentContainer[0].addControl(control);
+                                            }
+                                            else {
+                                                // Na parent control (e.g. StackPanel) has been specified, so add the control directly to the GUI layer
+                                                $scope.fullScreenUI.addControl(control);
+                                            }
+                                        }
+                                        break;
+                                    case "update_gui_control":
+                                        controls = getGuiControls(payload, true);
+
+                                        controls.forEach(function (controlToUpdate) {
+                                            updateGuiControl(payload, controlToUpdate);
+                                        });
+                                        break;
+                                    case "remove_gui_control":
+                                        controls = getGuiControls(payload, true);
+
+                                        controls.forEach(function (controlToRemove) {
+                                            // TODO where to get container?  Is a custom prototype function required??
+                                            parentContainer.removeControl(control);
+                                        });
+                                        break;
                                     default:
                                         logError("Unsupported command '" + payload.command + "'");
                                 }
@@ -1287,14 +1523,14 @@ https://doc.babylonjs.com/divingDeeper/tags
                                     // Construct a virtual payload with the correct fields
                                     switch (action.selectorType) {
                                         case "meshTag":
-                                            payload.meshTag = action.selector;
+                                            payload.tag = action.selector;
                                             break;
                                         case "meshName":
                                         case "json": // Array of mesh names
-                                            payload.meshName = action.selector;
+                                            payload.name = action.selector;
                                             break;
                                         case "meshId":
-                                            payload.meshId = action.selector;
+                                            payload.id = action.selector;
                                             break;
                                     }
                                     
@@ -1309,6 +1545,34 @@ https://doc.babylonjs.com/divingDeeper/tags
                         
                         $scope.init = function (config) {
                             $scope.config = config;
+                            
+                            // Add support to BabylonJs to allow GUI controls to be searched by name
+                            // See https://playground.babylonjs.com/#HETZDX#4
+                            BABYLON.GUI.AdvancedDynamicTexture.prototype.executeOnAllControls = function (func, container) {
+                                if (!container) {
+                                    container = this._rootContainer;
+                                }
+                                for (var _i = 0, _a = container.children; _i < _a.length; _i++) {
+                                    var child = _a[_i];
+                                    if (child.children) {
+                                        this.executeOnAllControls(func, child);
+                                        continue;
+                                    }
+                                    func(child);
+                                }
+                            };
+
+                            BABYLON.GUI.AdvancedDynamicTexture.prototype.getControlByName = function (name) {
+                                var foundControl = null;
+                                if (name) {
+                                    this.executeOnAllControls(function(control) {
+                                        if(control.name && control.name === name){
+                                            foundControl = control;
+                                        }
+                                    }, this._rootContainer);
+                                }
+                                return foundControl;
+                            };
                             
                             $scope.canvas = document.getElementById("babylonjsCanvas_" + config.id.replace(".","_"));
                             $scope.engine = new BABYLON.Engine($scope.canvas, true); // Generate the BABYLON 3D engine
@@ -1447,6 +1711,9 @@ https://doc.babylonjs.com/divingDeeper/tags
                     case "babylon_loader.js":
                         res.sendFile(babylonJsLoadersPath);
                         break;
+                    case "babylon_gui.js":
+                        res.sendFile(babylonJsGuiPath);
+                        break;                        
                     case "pep.js":
                         res.sendFile(pepJsPath);
                         break;
