@@ -80,6 +80,22 @@ https://doc.babylonjs.com/divingDeeper/tags
         console.log("Javascript file " + pepJsPath + " does not exist");
         pepJsPath = null;
     }
+    
+    // -------------------------------------------------------------------------------------------------
+    // Determining the path to the files in the dependent earcut module once.
+    // See https://discourse.nodered.org/t/use-files-from-dependent-npm-module/17978/5?u=bartbutenaers
+    // -------------------------------------------------------------------------------------------------
+    // See https://github.com/BabylonJS/Babylon.js/issues/5749#issuecomment-561847731
+    var earcutPath = require.resolve("earcut");
+
+    // The ...\src\earcut.js file should be replaced by the minified version to be used in the browser, to
+    // avoid "Uncaught ReferenceError: module is not defined".  See https://github.com/mapbox/earcut/issues/61
+    earcutPath = path.join(earcutPath.split("src")[0], "dist", "earcut.min.js");
+
+    if (!fs.existsSync(earcutPath)) {
+        console.log("Javascript file " + earcutPath + " does not exist");
+        earcutPath = null;
+    }
 
     function HTML(config) { 
         // The configuration is a Javascript object, which needs to be converted to a JSON string
@@ -94,6 +110,7 @@ https://doc.babylonjs.com/divingDeeper/tags
         <script src="ui_babylonjs/null/js/babylon_loader.js"></script>
         <script src="ui_babylonjs/null/js/babylon_gui.js"></script>
         <script src="ui_babylonjs/null/js/pep.js"></script>
+        <script src="ui_babylonjs/null/js/earcut.js"></script>
         <canvas id="babylonjsCanvas_` + config.id.replace(".","_") + `" touch-action="none" style="width:100%; height:100%; touch-action:none;" ng-init='init(` + configAsJson + `)'></div>
         `;
         
@@ -438,6 +455,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                             return nodes;
                         }
 
+                        // Vector4 is currently not supported yet in this function...
                         function getVector(payload, fieldName, required) {
                             var fieldValue = payload[fieldName];
                             if (fieldValue == undefined || fieldValue.x == undefined || fieldValue.y == undefined || fieldValue.z == undefined ||
@@ -448,7 +466,13 @@ https://doc.babylonjs.com/divingDeeper/tags
                                 return null;
                             }
                             
-                            return new BABYLON.Vector3(fieldValue.x, fieldValue.y, fieldValue.z);
+                            // When an extra 'w' coordinate is specified, create a Vector4 instance instead of a Vector3 instance.
+                            if (fieldValue != undefined && fieldValue.w != undefined && isNaN(fieldValue.w)) {
+                                return new BABYLON.Vector4(fieldValue.x, fieldValue.y, fieldValue.z, fieldValue.w);
+                            }
+                            else {
+                                return new BABYLON.Vector3(fieldValue.x, fieldValue.y, fieldValue.z);
+                            }
                         }
                         
                         function getRgbColor(payload, fieldName, required) {
@@ -468,6 +492,52 @@ https://doc.babylonjs.com/divingDeeper/tags
                             }
                             else {
                                 return new BABYLON.Color3.FromInts(fieldValue.r, fieldValue.g, fieldValue.b);
+                            }
+                        }
+                        
+                        // One dimensional arrays of colors are also supported
+                        function convertToRgbColor(obj, fieldName) {
+                            if (obj) {
+                                if (obj.hasOwnProperty(fieldName)) {
+                                    var fieldValue = obj[fieldName];
+                                    
+                                    if (Array.isArray(fieldValue)) {
+                                        // When dealing with an array of colors, replace every item in the array by the color
+                                        fieldValue.forEach(function(item, index, array) {
+                                            array[index] = getRgbColor({color: item}, "color", false);
+                                        });
+                                    }
+                                    else {
+                                        obj[fieldName] = getRgbColor(obj, fieldName, false);
+                                    }
+                                }
+                            }
+                        }
+                        
+                        //  One and two dimensional arrays of vectors are also supported
+                        function convertToVector(obj, fieldName) {
+                            if (obj) {
+                                if (obj.hasOwnProperty(fieldName)) {
+                                    var fieldValue = obj[fieldName];
+                                    
+                                    if (Array.isArray(fieldValue)) {
+                                        // When dealing with an array of vectors, replace every item in the array by the vector
+                                        fieldValue.forEach(function(item1, index1, array1) {
+                                            if (Array.isArray(array1[index1])) {
+                                                // When dealing with a 2-dimensional array of vectors, replace every item in the sub-array by the vector
+                                                array1[index1].forEach(function(item2, index2, array2) {
+                                                    array2[index2] = getVector({vector: item2}, "vector", false);
+                                                });
+                                            }
+                                            else {
+                                                array1[index1] = getVector({vector: item1}, "vector", false);
+                                            }
+                                        });
+                                    }
+                                    else {
+                                        obj[fieldName] = getVector(obj, fieldName, false);
+                                    }
+                                }
                             }
                         }
                         
@@ -801,8 +871,15 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         }
                                         
                                         if (payload.meshOptions) {
-                                            options = payload.meshOptions;
+                                            // Create a shallow clone of the properties, because we will some of those properties below
+                                            options = Object.assign({}, payload.meshOptions);
                                         }
+                    
+                                        // Convert some commonly used field (that are used in multiple mesh types)
+                                        convertToRgbColor(options, "faceColors");
+                                        convertToVector(options, "faceUV");
+                                        convertToVector(options, "frontUVs");
+                                        convertToVector(options, "backUVs");
 
                                         switch (payload.type) {
                                             case "box":
@@ -818,6 +895,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                                 mesh = BABYLON.MeshBuilder.CreateCylinder(name, options, $scope.scene);
                                                 break;
                                             case "capsule":
+                                                convertToVector(options, "orientation");
                                                 mesh = BABYLON.MeshBuilder.CreateCapsule(name, options, $scope.scene);
                                                 break;
                                             case "plane":
@@ -846,47 +924,62 @@ https://doc.babylonjs.com/divingDeeper/tags
                                                 mesh = BABYLON.MeshBuilder.CreateTiledGround(name, options, $scope.scene);
                                                 break;
                                             case "lines":
+                                                convertToVector(options, "points");
                                                 mesh = BABYLON.MeshBuilder.CreateLines(name, options, $scope.scene);
                                                 break;
                                             case "dashedLines":
+                                                convertToVector(options, "points");
                                                 mesh = BABYLON.MeshBuilder.CreateDashedLines(name, options, $scope.scene);
                                                 break;
                                             case "lineSystem":
+                                                convertToVector(options, "lines");
                                                 mesh = BABYLON.MeshBuilder.CreateLineSystem(name, options, $scope.scene);
                                                 break;
                                             case "ribbon":
+                                                convertToVector(options, "pathArray");
                                                 mesh = BABYLON.MeshBuilder.CreateRibbon(name, options, $scope.scene);
                                                 break;
                                             case "tube":
+                                                convertToVector(options, "path");
                                                 mesh = BABYLON.MeshBuilder.CreateTube(name, options, $scope.scene);
                                                 break;
                                             case "extrusion":
+                                                convertToVector(options, "shape");
+                                                convertToVector(options, "path");
                                                 mesh = BABYLON.MeshBuilder.ExtrudeShape(name, options, $scope.scene);
                                                 break;
                                             case "customExtrusion":
+                                                convertToVector(options, "shape");
+                                                convertToVector(options, "path");
                                                 mesh = BABYLON.MeshBuilder.ExtrudeShapeCustom(name, options, $scope.scene);
                                                 break;
                                             case "lathe":
+                                                convertToVector(options, "shape");
                                                 mesh = BABYLON.MeshBuilder.CreateLathe(name, options, $scope.scene);
                                                 break;
                                             case "polygon":
-                                                mesh = BABYLON.MeshBuilder.CreatePolygon(name, options, $scope.scene);
+                                                convertToVector(options, "shape");
+                                                convertToVector(options, "holes");
+                                                // See https://github.com/BabylonJS/Babylon.js/issues/5749#issuecomment-693722120
+                                                mesh = BABYLON.MeshBuilder.CreatePolygon(name, options, $scope.scene, earcut);
                                                 break;
                                             case "polygonExtrusion":
+                                                convertToVector(options, "shape");
+                                                convertToVector(options, "holes");
                                                 mesh = BABYLON.MeshBuilder.ExtrudePolygon(name, options, $scope.scene);
                                                 break;                                                
-                                            case "polygonMesh":
-                                                //TODO mesh = BABYLON.MeshBuilder.PolygonMeshBuilder(name, options, $scope.scene);
-                                                break;      
-                                            case "polyhedron":
-                                                mesh = BABYLON.MeshBuilder.CreatePolyhedron(name, options, $scope.scene);
+                                            //case "polygonMesh":
+                                            //    mesh = BABYLON.MeshBuilder.PolygonMeshBuilder(name, options, $scope.scene);
+                                            //    break;      
+                                            //case "polyhedron":
+                                            //    mesh = BABYLON.MeshBuilder.CreatePolyhedron(name, options, $scope.scene);
+                                            //    break;
+                                            case "icoSphere":
+                                                mesh = BABYLON.MeshBuilder.CreateIcoSphere(name, options, $scope.scene);
                                                 break;
-                                            case "icoSphere":
-                                                mesh = BABYLON.MeshBuilder.CreateIcoSphere(name, options, $scope.scene);
-                                                break;                                                   
-                                            case "icoSphere":
-                                                mesh = BABYLON.MeshBuilder.CreateIcoSphere(name, options, $scope.scene);
-                                                break;                                                   
+                                            default:
+                                                logError("The specified command is not supported");
+                                                return;
                                         }
                                         
                                         position = getVector(payload, "position", false);
@@ -910,8 +1003,9 @@ https://doc.babylonjs.com/divingDeeper/tags
                                             updateMesh(payload, meshToUpdate);
                                         });
                                         break;
-                                    case "remove_mesh":
-                                        meshes = getMeshes(payload, true);
+                                    case "remove_mesh": // TODO moet dit een remove_node worden??
+                                        // No need to show a message, when the mesh is already removed
+                                        meshes = getMeshes(payload, false);
                                         
                                         meshes.forEach(function (meshToDispose) {
                                             meshToDispose.dispose();
@@ -1716,6 +1810,9 @@ https://doc.babylonjs.com/divingDeeper/tags
                         break;                        
                     case "pep.js":
                         res.sendFile(pepJsPath);
+                        break;
+                    case "earcut.js":
+                        res.sendFile(earcutPath);
                         break;
                     default:
                         logError("Unknown resource " + req.params[0]);
