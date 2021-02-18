@@ -42,6 +42,8 @@ https://doc.babylonjs.com/divingDeeper/tags
     // See https://discourse.nodered.org/t/use-files-from-dependent-npm-module/17978/5?u=bartbutenaers
     // -------------------------------------------------------------------------------------------------
     var babylonJsPath = require.resolve("babylonjs");
+    // TODO change this
+    var babylonJsPath = babylonJsPath.replace("babylon.js", "babylon.max.js"); // Enable this unminified babylonjs version for debugging
 
     if (!fs.existsSync(babylonJsPath)) {
         console.log("Javascript file " + babylonJsPath + " does not exist");
@@ -436,7 +438,46 @@ https://doc.babylonjs.com/divingDeeper/tags
                         }
                         
                         function getCameras(payload, required) {
-                            return []; // TODO
+                            var camera;
+                            var cameras = [];
+
+                            if (payload.name && payload.name !== "") {
+                                if (Array.isArray(payload.name)) {
+                                    payload.name.forEach(function(name) {
+                                        cameras.push($scope.scene.getCameraByNameSearch (name));
+                                    });
+                                }
+                                if (payload.name.startsWith("^")) {
+                                    var regex = new RegExp(payload.name);
+
+                                    $scope.scene.cameras.forEach(function (cameraToTest) {
+                                        if (cameraToTest.name && regex.test(cameraToTest.name)) {
+                                             cameras.push(cameraToTest);
+                                        }
+                                    });
+                                }
+                                else {
+                                    camera = $scope.scene.getLightByName(payload.name);
+                                }
+                            }
+                            else if (payload.id && payload.id !== "") {
+                                camera = $scope.scene.getLightByID(payload.id);
+                            }
+                            else {
+                                if (required) {
+                                    logError("The name or id of the camera should be specified");
+                                }
+                            }
+                            
+                            if (camera) {
+                                cameras.push(camera);
+                            }
+                            
+                            if (required && cameras.length === 0) {
+                                logError("No cameras found with the specified name or id");
+                            }
+                            
+                            return cameras;
                         }
                         
                         // A node can be a mesh, light or camera
@@ -650,60 +691,153 @@ https://doc.babylonjs.com/divingDeeper/tags
                             );
                         }
 
-                        function sendMessageProperties(mesh) {
+                        function sendMeshProperties(mesh) {
                             var boundingBox = mesh.getBoundingInfo().boundingBox;
-    
-                            // Send a subset of the mesh properties to the Node-RED server
-                            $scope.send({
-                                payload: {
-                                    id: mesh.id,
-                                    name: mesh.name,
-                                    edgesColor: {
-                                        r: mesh.edgesColor.r * 255,
-                                        g: mesh.edgesColor.g * 255,
-                                        b: mesh.edgesColor.b * 255
+                            var absolutePosition = mesh.getAbsolutePosition();
+                            
+                            var payload = {
+                                id: mesh.id,
+                                name: mesh.name,
+                                className: mesh.getClassName(),
+                                edgesColor: {
+                                    r: mesh.edgesColor.r * 255,
+                                    g: mesh.edgesColor.g * 255,
+                                    b: mesh.edgesColor.b * 255
+                                },
+                                outlineWidth: mesh.outlineWidth,
+                                uniqueId: mesh.uniqueId,
+                                position: {
+                                    x: absolutePosition.x,
+                                    y: absolutePosition.y,
+                                    z: absolutePosition.z
+                                },
+                                isVisible: mesh.isVisible,
+                                scaling: {
+                                    x: mesh.scaling.x,
+                                    y: mesh.scaling.y,
+                                    z: mesh.scaling.z
+                                },
+                                rotation: {
+                                    // Convert the angles from radians to degrees
+                                    x: BABYLON.Tools.ToDegrees(mesh.rotation.x),
+                                    y: BABYLON.Tools.ToDegrees(mesh.rotation.y),
+                                    z: BABYLON.Tools.ToDegrees(mesh.rotation.z)
+                                },
+                                boundingBox: {
+                                    minimum: {
+                                        x: boundingBox.minimum.x,
+                                        y: boundingBox.minimum.y,
+                                        z: boundingBox.minimum.z
                                     },
-                                    outlineWidth: mesh.outlineWidth,
-                                    uniqueId: mesh.uniqueId,
-                                    position: {
-                                        x: mesh.absolutePosition.x,
-                                        y: mesh.absolutePosition.y,
-                                        z: mesh.absolutePosition.z
+                                    maximum: {
+                                        x: boundingBox.maximum.x,
+                                        y: boundingBox.maximum.y,
+                                        z: boundingBox.maximum.z
                                     },
-                                    isVisible: mesh.isVisible,
-                                    scaling: {
-                                        x: mesh.scaling.x,
-                                        y: mesh.scaling.y,
-                                        z: mesh.scaling.z
-                                    },
-                                    rotation: {
-                                        // Convert the angles from radians to degrees
-                                        x: BABYLON.Tools.ToDegrees(mesh.rotation.x),
-                                        y: BABYLON.Tools.ToDegrees(mesh.rotation.y),
-                                        z: BABYLON.Tools.ToDegrees(mesh.rotation.z)
-                                    },
-                                    boundingBox: {
-                                        minimum: {
-                                            x: boundingBox.minimum.x,
-                                            y: boundingBox.minimum.y,
-                                            z: boundingBox.minimum.z
-                                        },
-                                        maximum: {
-                                            x: boundingBox.maximum.x,
-                                            y: boundingBox.maximum.y,
-                                            z: boundingBox.maximum.z
-                                        },
-                                        center: {
-                                            x: boundingBox.center.x,
-                                            y: boundingBox.center.y,
-                                            z: boundingBox.center.z 
-                                        }
+                                    center: {
+                                        x: boundingBox.center.x,
+                                        y: boundingBox.center.y,
+                                        z: boundingBox.center.z 
                                     }
                                 }
+                            }
+    
+                            // Send a subset of the mesh properties to the Node-RED server.
+                            // Remark: BABYLON.SceneSerializer.SerializeMesh(mesh) contains too much info that is not relevant for this case.
+                            $scope.send({
+                                payload: payload
                             });
                         }
                         
+                        function sendLightProperties(light) {
+                            var absolutePosition = light.getAbsolutePosition();
+                            
+                            var payload = {
+                                id: light.id,
+                                name: light.name,
+                                className: light.getClassName(),
+                                position: {
+                                    x: absolutePosition.x,
+                                    y: absolutePosition.y,
+                                    z: absolutePosition.z
+                                },
+                                diffuse: {
+                                    r: light.diffuse.r * 255,
+                                    g: light.diffuse.g * 255,
+                                    b: light.diffuse.b * 255
+                                },
+                                specular: {
+                                    r: light.specular.r * 255,
+                                    g: light.specular.g * 255,
+                                    b: light.specular.b * 255
+                                },
+                                range: light.range,
+                                intensity: light.intensity
+                            }
+                            
+                            // Not all ligth types have a direction
+                            if (light.direction) {
+                                payload.direction = {
+                                    x: light.direction.x,
+                                    y: light.direction.y,
+                                    z: light.direction.z
+                                }
+                            }
+
+                            // Send a subset of the light properties to the Node-RED server
+                            $scope.send({
+                                payload: payload
+                            });
+                        }
+                        
+                        function sendCameraProperties(camera) {
+                            var payload = {
+                                id: camera.id,
+                                name: camera.name,
+                                className: camera.getClassName(),
+                                cameraDirection: { // TODO: rename to 'direction'??
+                                    x: camera.cameraDirection.x,
+                                    y: camera.cameraDirection.y,
+                                    z: camera.cameraDirection.z
+                                },
+                                cameraRotation: { // TODO: rename to 'rotation'??
+                                    x: camera.cameraRotation.x,
+                                    y: camera.cameraRotation.y,
+                                    z: camera.cameraRotation.z
+                                },
+                                position: {
+                                    x: camera.position._x,
+                                    y: camera.position._y,
+                                    z: camera.position._z
+                                },
+                                targetPosition: {
+                                    x: camera.target.x,
+                                    y: camera.target.y,
+                                    z: camera.target.z,
+                                }
+                            }
+
+                            // Send a subset of the light properties to the Node-RED server
+                            $scope.send({
+                                payload: payload
+                            });
+
+                        }
+                        
                         function updateMesh(payload, mesh) {
+                            var position = getVector(payload, "position", false);
+                            if (position) {
+                                mesh.position = position;
+                            }
+                           
+                            var rotation = getVector(payload, "rotation", false);
+                            if (rotation) {
+                                // Rotate the shape around the axes over the specified Euler angles (i.e. radians!!)
+                                mesh.rotation.x = BABYLON.Tools.ToRadians(rotation.x);
+                                mesh.rotation.y = BABYLON.Tools.ToRadians(rotation.y);
+                                mesh.rotation.z = BABYLON.Tools.ToRadians(rotation.z);
+                            }
+                                        
                             if (payload.outlineWidth) {
                                 mesh.outlineWidth = payload.outlineWidth;
                             }
@@ -716,8 +850,6 @@ https://doc.babylonjs.com/divingDeeper/tags
                             // Toggle the outline for the picked mesh
                             if(!mesh.renderOutline) {
                                 mesh.renderOutline = true;
-                                
-                                sendMessageProperties(mesh);
                             }
                             else {
                                 mesh.renderOutline = false;
@@ -779,6 +911,22 @@ https://doc.babylonjs.com/divingDeeper/tags
                             if (payload.range !== undefined && !isNaN(payload.range)) {
                                 // Set how far the light reaches.  Note: this is only available for point and spot lights.
                                 light.range = payload.range;
+                            }
+                        }
+                        
+                        function updateCamera(payload, camera) {
+                            if (payload.active === true) {
+                                // A scene can only have 1 active camera
+                                $scope.scene.activeCamera = camera;
+                            }
+                         
+                            // The target position can be set for all camera types, except the followCamera
+                            if (payload.type !== "followCamera") {
+                                var targetPosition = getVector(payload, "targetPosition", true);
+
+                                if (targetPosition) {
+                                    camera.setTarget(targetPosition);
+                                }
                             }
                         }
                         
@@ -852,7 +1000,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                             var name = "";
                             var options = {};
                             var position, direction, alpha, beta, radius, degrees, radians, parentContainer;
-                            var diffuseColor, specularColor, emissiveColor, ambientColor;
+                            var diffuseColor, specularColor, emissiveColor, ambientColor, gizmoColor;
                             
                             var command = payload.command.toLowerCase();
                                         
@@ -981,12 +1129,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                                 logError("The specified command is not supported");
                                                 return;
                                         }
-                                        
-                                        position = getVector(payload, "position", false);
-                                        if (position) {
-                                            mesh.position = position;
-                                        }
-                                        
+
                                         // If any properties have been specified in the message, apply those immediately to the new mesh
                                         updateMesh(payload, mesh);
                                         
@@ -1003,7 +1146,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                             updateMesh(payload, meshToUpdate);
                                         });
                                         break;
-                                    case "remove_mesh": // TODO moet dit een remove_node worden??
+                                    case "remove_mesh":
                                         // No need to show a message, when the mesh is already removed
                                         meshes = getMeshes(payload, false);
                                         
@@ -1011,39 +1154,11 @@ https://doc.babylonjs.com/divingDeeper/tags
                                             meshToDispose.dispose();
                                         });
                                         break;
-                                    case "position_mesh":
-                                        position = getVector(payload, "position", true);
-                                        
-                                        if (position) {
-                                            meshes = getMeshes(payload, true);
-                                            
-                                            meshes.forEach(function (meshToPosition) {
-                                                // Move the shape to the specified position
-                                                meshToPosition.position.x = position.x;
-                                                meshToPosition.position.y = position.y;
-                                                meshToPosition.position.z = position.z;
-                                            });
-                                        }
-                                        break;
-                                    case "rotate_mesh":
-                                        degrees = getVector(payload, "degrees", true);
-                                        
-                                        if (degrees) {
-                                            meshes = getMeshes(payload, true);
-                                            
-                                            meshes.forEach(function (meshToRotate) {
-                                                // Rotate the shape around the axes over the specified Euler angles (i.e. radians!!)
-                                                meshToRotate.rotation.x = BABYLON.Tools.ToRadians(degrees.x);
-                                                meshToRotate.rotation.y = BABYLON.Tools.ToRadians(degrees.y);
-                                                meshToRotate.rotation.z = BABYLON.Tools.ToRadians(degrees.z);
-                                            });
-                                        }
-                                        break;
                                     case "get_mesh_properties":
                                         meshes = getMeshes(payload, true);
                                         
                                         meshes.forEach(function (meshToGet) {
-                                            sendMessageProperties(meshToGet);
+                                            sendMeshProperties(meshToGet);
                                         });
                                         break;
                                     case "create_light":
@@ -1100,6 +1215,21 @@ https://doc.babylonjs.com/divingDeeper/tags
                                             updateLight(payload, lightToUpdate);
                                         });
                                         break;
+                                    case "remove_light":
+                                        // No need to show a message, when the mesh is already removed
+                                        lights = getLights(payload, false);
+                                        
+                                        lights.forEach(function (lightToRemove) {
+                                            lightToRemove.dispose();
+                                        });
+                                        break;
+                                    case "get_light_properties":
+                                        lights = getLights(payload, true);
+                                        
+                                        lights.forEach(function (lightToGet) {
+                                            sendLightProperties(lightToGet);
+                                        });
+                                        break;
                                     case "create_material":
                                         if (!payload.name) {
                                             logError("The payload should contain a 'materialName'");
@@ -1152,12 +1282,15 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         }
                                         break;
                                     case "update_mesh_material":
-                                        meshes = getMeshes({name: payload.targetName, id: payload.targetId}, true);
+                                        meshes = getMeshes(payload, true);
                                         
                                         meshes.forEach(function (meshToUpdate) {
                                             if (meshToUpdate.material) {
                                                 // Update the mesh material with settings from the input message
                                                 updateMaterial(payload, meshToUpdate.material);
+                                            }
+                                            else {
+                                                logError("The mesh (with name '" + meshToUpdate.name + "') has no material to update");
                                             }
                                         });
                                         break;
@@ -1370,89 +1503,143 @@ https://doc.babylonjs.com/divingDeeper/tags
                                             name = payload.name;
                                         }
                                         
-                                        position = getVector(payload, "position", true);
-
-                                        if (position) {
-                                            switch (cameraType) {
-                                                case "universal":
-                                                    camera = new BABYLON.UniversalCamera(name, position, $scope.scene);
-                                                    break;
-                                                case "arcRotate":
-                                                    /*
-                                                    // Parameters: name, alpha, beta, radius, target position, scene
-                                                    camera = new BABYLON.ArcRotateCamera(name, 0, 0, 10, position, $scope.scene);
-
-
-
-                                                    // Targets the camera to a particular position. In this case the scene origin
-                                                    camera.setTarget(BABYLON.Vector3.Zero());
-                                                    // Attach the camera to the canvas
-                                                    camera.attachControl(canvas, true);
-
-
-                                                    // Parameters: name, position, scene
-                                                    camera = new BABYLON.FollowCamera(name, position, $scope.scene);
-                                                    // The goal distance of camera from target
-                                                    camera.radius = 30;
-                                                    // The goal height of camera above local origin (centre) of target
-                                                    camera.heightOffset = 10;
-                                                    // The goal rotation of camera around local origin (centre) of target in x y plane
-                                                    camera.rotationOffset = 0;
-                                                    // Acceleration of camera in moving from current to goal position
-                                                    camera.cameraAcceleration = 0.005;
-                                                    // The speed at which acceleration is halted
-                                                    camera.maxCameraSpeed = 10;
-
-
-                                                    // Parameters : name, position, eyeSpace, scene
-                                                    camera = new BABYLON.AnaglyphUniversalCamera(name, position, 0.033, $scope.scene);
-
-
-                                                    // Parameters : name, alpha, beta, radius, target, eyeSpace, scene
-                                                    camera = new BABYLON.AnaglyphArcRotateCamera(name, -Math.PI / 2, Math.PI / 4, 20, new BABYLON.Vector3.Zero(), 0.033, $scope.scene);
-
-
-
-                                                    // Parameters : name, position, scene
-                                                    camera = new BABYLON.DeviceOrientationCamera(name, position, $scope.scene);
-                                                    // Targets the camera to a particular position
-                                                    camera.setTarget(new BABYLON.Vector3(0, 0, -10));
-                                                    // Sets the sensitivity of the camera to movement and rotation
-                                                    camera.angularSensibility = 10;
-                                                    camera.moveSensibility = 10;
-
-
-
-                                                    // Parameters: name, alpha, beta, radius, target position, scene
-                                                    camera = new BABYLON.ArcRotateCamera(name, 0, 0, 10, position, $scope.scene);
-                                                    // Positions the camera overwriting alpha, beta, radius
-                                                    camera.setPosition(new BABYLON.Vector3(0, 0, 20));
-                                                    // This attaches the camera to the canvas
-                                                    camera.attachControl(canvas, true);
-                                                    */
-                                                    break;
+                                        // The position is required for all camera types, except the followCamera
+                                        if (payload.type !== "followCamera") {
+                                            position = getVector(payload, "position", true);
+                                            
+                                            if (!position) {
+                                                return;
                                             }
                                         }
-                                        break;
-                                    case "show_axes":
-                                        if ($scope.axesViewer) {
-                                            // When there are already axes displayed, remove those because the new ones might have other scaleLines
-                                            $scope.axesViewer.dispose();
+
+                                        switch (payload.type) {
+                                            case "universal":
+                                                camera = new BABYLON.UniversalCamera(name, position, $scope.scene);
+                                                break;
+                                            case "arcRotate":
+                                                // The 3 parameters after the name (i.e. alpha, beta, radius will be overwritten be our position vector.
+                                                // This way we avoid that users need to calculate the angles themselves...
+                                                // Pass (0,0,0) as target vector, since the target vector will be update at the end of this function anyway.
+                                                camera = new BABYLON.ArcRotateCamera(name, 0, 0, 0, BABYLON.Vector3(0, 0, 0), $scope.scene);
+                                                camera.setPosition(position);
+                                                break;
+                                            case "follow":
+                                                meshes = getMeshes({name: payload.targetName, id: payload.targetId}, true);
+                                        
+                                                if (meshes.length === 0) {
+                                                    return;
+                                                }
+                                                
+                                                if (meshes.length > 1) {
+                                                    logError("Multiple target meshes have been found, so the camera will follow the first mesh");
+                                                }
+
+                                                camera = new BABYLON.FollowCamera(name, position, $scope.scene);
+                                                
+                                                // Let the camera follow the first found mesh                                           
+                                                camera.lockedTarget = meshes[0];
+                                                
+                                                if (payload.radius && !isNaN(payload.radius)) {
+                                                    // The goal distance between the camera and the target
+                                                    camera.radius = payload.radius;
+                                                }
+                                                
+                                                if (payload.heightOffset && !isNaN(payload.heightOffset)) {
+                                                    // The goal height of the camera above the local origin (centre) of target
+                                                    camera.heightOffset = payload.heightOffset;
+                                                }
+                                                
+                                                if (payload.rotationOffset && !isNaN(payload.rotationOffset)) {
+                                                    // The goal rotation of the camera around the local origin (centre) of the target in the x y plane
+                                                    camera.rotationOffset = payload.rotationOffset;
+                                                }
+                                                
+                                                if (payload.cameraAcceleration && !isNaN(payload.cameraAcceleration)) {
+                                                    // Acceleration of the camera in moving from current to the goal position
+                                                    camera.cameraAcceleration = payload.cameraAcceleration;
+                                                }
+                                                
+                                                if (payload.maxCameraSpeed && !isNaN(payload.maxCameraSpeed)) {
+                                                    // The speed at which acceleration is halted
+                                                    camera.maxCameraSpeed = payload.maxCameraSpeed;
+                                                }
+                                                break;
+                                            case "anaglyphUniversal":
+                                                camera = new BABYLON.AnaglyphUniversalCamera(name, position, payload.eyeSpace, $scope.scene);
+                                                break;
+                                            case "anaglypArcRotate":
+                                                // The 3 parameters after the name (i.e. alpha, beta, radius) will be overwritten be our position vector.
+                                                // This way we avoid that users need to calculate the angles themselves...
+                                                // Pass (0,0,0) as target vector, since the target vector will be update at the end of this function anyway.
+                                                camera = new BABYLON.AnaglyphArcRotateCamera(name, 0, 0, 0, BABYLON.Vector3(0, 0, 0), payload.eyeSpace, $scope.scene);
+                                                camera.setPosition(position);
+                                                break;
+                                            case "deviceOrientation":
+                                                targetPosition = getVector(payload, "targetPosition", true);
+                                                if (!targetPosition) {
+                                                    return;
+                                                }
+                                                
+                                                camera = new BABYLON.DeviceOrientationCamera(name, position, $scope.scene);
+
+                                                if (payload.angularSensibility && !isNaN(payload.angularSensibility)) {
+                                                    // Set the sensitivity of the camera for rotation
+                                                    camera.angularSensibility = payload.angularSensibility;
+                                                }
+                                                
+                                                if (payload.moveSensibility && !isNaN(payload.moveSensibility)) {
+                                                    // Set the sensitivity of the camera for movement
+                                                    camera.moveSensibility = payload.moveSensibility;
+                                                }
+                                                break;
                                         }
                                         
-                                        var scaleLines = 1;
-                                    
-                                        if (!isNaN(payload.scaleLines)) {
-                                            scaleLines = payload.scaleLines;
+                                        updateCamera(payload, camera);
+                                        
+                                        camera.attachControl($scope.canvas, true);
+                                        break;
+                                    case "update_camera":
+                                        cameras = getCameras(payload, true);
+                                        
+                                        cameras.forEach(function (cameraToGet) {
+                                            updateCamera(payload, camera);
+                                        });
+                                        break;
+                                    case "get_camera_properties":
+                                        cameras = getCameras(payload, true);
+                                        
+                                        cameras.forEach(function (cameraToGet) {
+                                            sendCameraProperties(cameraToGet);
+                                        });
+                                        break;
+                                    case "update_axes":
+                                        if (payload.showAxes == undefined) {
+                                            logError("The payload should contain a showAxes boolean field");
+                                            return;
                                         }
-                                    
-                                        $scope.axesViewer = new BABYLON.Debug.AxesViewer($scope.scene, scaleLines);
-                                        break;                                        
-                                    case "hide_axes":
-                                        if ($scope.axesViewer) {
-                                            $scope.axesViewer.dispose();
-                                            $scope.axesViewer = null;
+                                        
+                                        if (payload.showAxes === true) {
+                                            // Only create the AxesViewer when not created yet
+                                            if (!$scope.axesViewer) {
+                                                $scope.axesViewer = new BABYLON.Debug.AxesViewer($scope.scene, 1);
+                                            }
                                         }
+                                        else {
+                                            if ($scope.axesViewer) {
+                                                // Hide the axes
+                                                $scope.axesViewer.dispose();
+                                                $scope.axesViewer = null;
+                                            }
+                                        }
+                                        
+                                        if ($scope.axesViewer) {                                          
+                                            if (!isNaN(payload.scaleLines)) {
+                                                $scope.axesViewer.scaleLines = payload.scaleLines;
+                                            }
+
+                                            
+                                        }
+                                        
                                         break;
                                     case "start_selection_mode":
                                         if (!$scope.scene.onPointerDown) {
@@ -1481,7 +1668,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                                     if(!pickedMesh.renderOutline) {
                                                         pickedMesh.renderOutline = true;
                                                         
-                                                        sendMessageProperties(pickedMesh);
+                                                        sendMeshProperties(pickedMesh);
                                                     }
                                                     else {
                                                         pickedMesh.renderOutline = false;
@@ -1566,6 +1753,99 @@ https://doc.babylonjs.com/divingDeeper/tags
                                             parentContainer.removeControl(control);
                                         });
                                         break;
+                                    case "add_gizmo":
+                                        if (!payload.type || (typeof payload.type !== "string") ) {
+                                            logError("The payload should contain a camera type");
+                                            return;
+                                        }
+                                        
+                                        if (!$scope.utilityLayer) {
+                                            // Create a single utility layer (for performance), where the gizmos will be rendered on.
+                                            // We reuse this layer, since every new utility layer comes with additional overhead.
+                                            $scope.utilityLayer = new BABYLON.UtilityLayerRenderer($scope.scene);
+                                        }
+                                        
+                                        meshes = getMeshes(payload, true);
+                                        
+                                        if (meshes.length === 0) {
+                                            return;
+                                        }
+                                        
+                                        if (meshes.length === 0) {
+                                            return;
+                                        }
+                                        
+                                        if (meshes.length > 1) {
+                                            logError("Multiple meshes found, but only the first will get a gizmo");
+                                        }
+                                        
+                                        // When a previous gizmo is available, then remove it to make sure that only one mesh has a gizmo
+                                        if ($scope.currentGizmo) {
+                                            $scope.currentGizmo.attachedMesh = null; // Hide the current gizmo
+                                            $scope.currentGizmo.dispose();
+                                            $scope.currentGizmo = null;
+                                        }
+                                            
+                                        switch (payload.type) {
+                                            case "axisDrag":
+                                                var direction = getVector(payload, "direction", true); // E.g. (1,0,0)
+                            
+                                                if (direction) {
+                                                    gizmoColor = getRgbColor(payload, "outlineColor", false);
+                                                    $scope.currentGizmo = new BABYLON.AxisDragGizmo(direction, gizmoColor, $scope.utilityLayer);
+                                                }
+                                                break;
+                                            case "axisScale":
+                                                var direction = getVector(payload, "direction", true); // E.g. (1,0,0)
+                            
+                                                if (direction) {
+                                                    gizmoColor = getRgbColor(payload, "outlineColor", false);
+                                                    $scope.currentGizmo = new BABYLON.AxisScaleGizmo(direction, gizmoColor, $scope.utilityLayer);
+                                                }
+                                                break;
+                                            case "planeRotation":
+                                                var direction = getVector(payload, "direction", true); // E.g. (1,0,0)
+                            
+                                                if (direction) {
+                                                    gizmoColor = getRgbColor(payload, "outlineColor", false);
+                                                    $scope.currentGizmo = new BABYLON.PlaneRotationGizmo(direction, gizmoColor, $scope.utilityLayer);
+                                                }
+                                                break;
+                                            case "position":
+                                                $scope.currentGizmo = new BABYLON.PositionGizmo($scope.utilityLayer);
+                                                break;
+                                            case "scale":
+                                                $scope.currentGizmo = new BABYLON.ScaleGizmo($scope.utilityLayer);
+                                                break;
+                                            case "rotation":
+                                                $scope.currentGizmo = new BABYLON.RotationGizmo($scope.utilityLayer);
+                                                break;
+                                            case "boundingBox":
+                                                $scope.currentGizmo = new BABYLON.BoundingBoxGizmo();
+                                                break;
+                                            default:
+                                                logError("Unsupported gizmo type '" + payload.type + "'");
+                                        }
+                                        
+                                        if (!$scope.currentGizmo) {
+                                            return;
+                                        }   
+    
+                                        // Apply the gizmo to the first mesh found
+                                        $scope.currentGizmo.attachedMesh = meshes[0];
+
+                                        // Keep the gizmo fixed to world rotation
+                                        $scope.currentGizmo.updateGizmoRotationToMatchAttachedMesh = false;
+                                        $scope.currentGizmo.updateGizmoPositionToMatchAttachedMesh = true;
+                                        break;
+                                    case "remove_gizmo":
+                                        // When a previous gizmo is available, then remove it to make sure that only one mesh has a gizmo
+                                        if ($scope.currentGizmo) {
+                                            $scope.currentGizmo.attachedMesh = null; // Hide the current gizmo
+                                            $scope.currentGizmo.dispose();
+                                            $scope.currentGizmo = null;
+                                        }
+                                        break;
                                     default:
                                         logError("Unsupported command '" + payload.command + "'");
                                 }
@@ -1584,8 +1864,30 @@ https://doc.babylonjs.com/divingDeeper/tags
                             
                             $scope.scene = scene;
                             
-                            // Make sure there is always a camera available, to avoid "Uncaught Error: No camera defined".
-                            // The second parameter specifies 'not' to replace the active camera, when already available in the scene
+                            if(!Array.isArray($scope.config.startupCommands)){
+                                $scope.config.startupCommands = [$scope.config.startupCommands];
+                            }
+                            
+                            var startupCommands = [];
+
+                            try {
+                                startupCommands = JSON.parse($scope.config.startupCommands);
+                            }
+                            catch(err) {
+                                logError("The 'startup' parameter in the config screen does not contain valid JSON data.");
+                            }
+                            
+                            startupCommands.forEach(function(val,idx){
+                                if(typeof val != "object" || !val.command) {
+                                    logError("The 'startup' parameter in the config screen should contain an object (or an array of objects) which have a 'command' property.");
+                                }
+                                else {   
+                                    processCommand(val);
+                                }
+                            })
+                            
+                            // Make sure there is always a (arc rotate) camera available, to avoid "Uncaught Error: No camera defined".
+                            // When alwaysDefaultCam is true, the existing active camera (when already available in the scene) will become inactive.
                             $scope.scene.createDefaultCamera(true, false, true);
                             
                             // Create a default light, but don't replace the existing one (if already available in the scene)
