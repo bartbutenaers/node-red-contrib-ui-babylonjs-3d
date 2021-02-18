@@ -36,7 +36,25 @@
             filename: {value: ''},
             outputField: {value: "payload"},
             actions: {value: []},
-            showBrowserErrors: {value: true}
+            showBrowserErrors: {value: true},
+            startupCommands: {value: JSON.stringify([
+                {
+                    "command": "create_camera",
+                    "type": "arcRotate",
+                    "name": "my_arcRotate_cam",
+                    "position": {
+                        "x": -211,
+                        "y": 35,
+                        "z": -195
+                    },
+                    "targetPosition": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                    },
+                    "active": true
+                }
+            ])}
         },
         inputs:1,
         outputs:1,
@@ -200,6 +218,12 @@
                 $('#node-input-columnPayload').text("msg." + outputField);
             });
             $('#node-input-outputField').change();
+            
+            $('#node-input-startupCommands').typedInput({
+                types: ['json'],
+                default: 'json'
+            });
+            $("#node-input-startupCommands").val(this.startupCommands);
         },
         oneditsave: function() {
             var node = this;
@@ -250,6 +274,10 @@ debugger
             <div class="form-row">
                 <label for="node-input-filename"><i class="fa fa-file-o"></i> File</label>
                 <input type="text" id="node-input-filename" placeholder="xxx.gltf or xxx.obj or xxx.babylon">
+            </div>
+            <div class="form-row">
+                <label for="node-input-startupCommands"><i class="fa fa-clock-o"></i> Startup</label>
+                <input type="text" id="node-input-startupCommands" style="width:70%">
             </div>
         </div>
         <!-- Content of all tabsheets -->
