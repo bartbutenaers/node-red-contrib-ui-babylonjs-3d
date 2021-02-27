@@ -203,7 +203,7 @@
                 },
                 removable: true
             });
-    debugger;        
+
             // Show all the actions (stored in this node) into the editableList
             if (this.actions) {
                 this.actions.forEach(function (action, index) {
@@ -227,7 +227,7 @@
         },
         oneditsave: function() {
             var node = this;
-debugger
+
             // Copy all the actions from the editableList to this node
             node.actions = [];
             var actionsList = $("#node-input-actions-container").editableList('items');
