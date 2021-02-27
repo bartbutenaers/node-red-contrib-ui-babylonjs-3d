@@ -250,7 +250,12 @@ When being in selection mode, it is possible to click on meshes in the 3D scene.
 
 ### Mission impossible style
 
+The following demo combines a number of techniques: when a problem has been detected in a room, the building is displayed in wireframe and the room will be highlighted in red.
+
 ![image](https://user-images.githubusercontent.com/14224149/109227349-7a0c8880-77c0-11eb-92c8-949bc7833909.png)
 ```
 [{"id":"1c4cf3b9.6af1bc","type":"ui_babylon_js","z":"2b6f5d19.202242","name":"BabylongJs2 (Mission impossible style)","group":"33049469.4e754c","order":0,"width":"12","height":"14","folder":"C:\\Users\\Gebruiker\\Downloads\\sanzio","filename":"scene.gltf","outputField":"payload","actions":[],"showBrowserErrors":false,"startupCommands":"","x":540,"y":1820,"wires":[[]]},{"id":"2e49028d.dabb9e","type":"inject","z":"2b6f5d19.202242","name":"Show wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":true}","payloadType":"json","x":220,"y":1820,"wires":[["1c4cf3b9.6af1bc"]]},{"id":"1fc21a5c.7022a6","type":"inject","z":"2b6f5d19.202242","name":"Hide wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":false}","payloadType":"json","x":220,"y":1860,"wires":[["1c4cf3b9.6af1bc"]]},{"id":"19697652.ab830a","type":"inject","z":"2b6f5d19.202242","name":"Show appartement in red","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh\",\"name\":\"Shape018_paredes_0\",\"outlineWidth\":120,\"outlineColor\":{\"r\":255,\"g\":0,\"b\":0},\"renderOutline\":true}","payloadType":"json","x":190,"y":1760,"wires":[["1c4cf3b9.6af1bc"]]},{"id":"33049469.4e754c","type":"ui_group","name":"Mission impossible style","tab":"c2805f33.505de","order":1,"disp":true,"width":"12","collapse":false},{"id":"c2805f33.505de","type":"ui_tab","name":"BabylonJs2","icon":"dashboard","disabled":false,"hidden":false}]
 ```
+Which will result into this:
+
+![mission_impossible](https://user-images.githubusercontent.com/14224149/109401772-e3bb9c80-7950-11eb-958b-2e374b5b925c.gif)
