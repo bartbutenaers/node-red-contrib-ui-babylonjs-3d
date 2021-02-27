@@ -29,14 +29,24 @@ Some basic steps to setup a 3D scene with this node:
 
 ## Meshes
 
+Meshes are renderable models in the 3D scene, e.g. boxes, spheres ...
+
 ### Working with meshes
+
+This node offers some basic functionality for working with meshes:
 
 ![image](https://user-images.githubusercontent.com/14224149/109356995-c53aa000-7881-11eb-8b28-beb860fc378a.png)
 ```
 [{"id":"361e82c.ab5407e","type":"inject","z":"2b6f5d19.202242","name":"Add \"pick\" action to mesh","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"add_mesh_action\",\"name\":\"my_box\",\"actionTrigger\":\"pick\",\"payloadToSend\":\"my_payload\",\"topicToSend\":\"my_topic\"}","payloadType":"json","x":1390,"y":340,"wires":[["4876dd4.6fe9224"]]},{"id":"b2e122e.7541de","type":"inject","z":"2b6f5d19.202242","name":"Create box mesh","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"create_mesh\",\"type\":\"box\",\"name\":\"my_box\",\"meshOptions\":{\"width\":1,\"height\":2,\"depth\":2},\"position\":{\"x\":0,\"y\":0,\"z\":0}}","payloadType":"json","x":1360,"y":220,"wires":[["4876dd4.6fe9224"]]},{"id":"698ab7e2.6fa6a8","type":"inject","z":"2b6f5d19.202242","name":"Remove box mesh","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"remove_mesh\",\"name\":\"my_box\"}","payloadType":"json","x":1370,"y":260,"wires":[["4876dd4.6fe9224"]]},{"id":"3b6e1e34.0a59c2","type":"inject","z":"2b6f5d19.202242","name":"Get mesh properties","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"get_mesh_properties\",\"name\":\"^.*\"}","payloadType":"json","x":1370,"y":300,"wires":[["4876dd4.6fe9224"]]},{"id":"4876dd4.6fe9224","type":"ui_babylon_js","z":"2b6f5d19.202242","name":"BabylonJs3 (Material)","group":"284af3b3.34ccbc","order":0,"width":"6","height":"6","folder":"","filename":"","outputField":"payload","actions":[{"selectorType":"meshName","selector":"my_box","trigger":"nothing","payload":"my_payload","topic":"my_topic"}],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":3,\"y\":3,\"z\":3},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true}]","x":1680,"y":220,"wires":[["db6bbf92.6ef2d"]]},{"id":"db6bbf92.6ef2d","type":"debug","z":"2b6f5d19.202242","name":"3D output","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":1880,"y":220,"wires":[]},{"id":"284af3b3.34ccbc","type":"ui_group","z":"","name":"Default","tab":"7a5078d4.54b268","order":1,"disp":true,"width":"6","collapse":false},{"id":"7a5078d4.54b268","type":"ui_tab","z":"","name":"BabylonJs3 (Material)","icon":"dashboard","disabled":false,"hidden":false}]
 ```
+Some remarks about this flow:
++ Create a mesh, with some id and/or name.  Afterwards this mesh can be removed, based on the name or id.  Note that arrays and regular expressions are also supported to remove multiple meshes at once.
++ Get the properties of a mesh.
++ Add a pick-action to a mesh (see the "Helper tools" section).
 
 ### Mesh transformations
+
+Via transformations it is possible to position a mesh (or multiple meshes) at a specified location, or to rotate it:
 
 ![Mesh transformations](https://user-images.githubusercontent.com/14224149/109357673-e6e85700-7882-11eb-92dc-a4276990f6b3.png)
 ```
@@ -45,12 +55,19 @@ Some basic steps to setup a 3D scene with this node:
 
 ### Wireframes
 
+A mesh can be updated to show it in wireframe mode:
+
 ![Wireframe](https://user-images.githubusercontent.com/14224149/109358280-ca98ea00-7883-11eb-932e-9958ebb12808.png)
 ```
 [{"id":"739cddf3.86dac4","type":"ui_babylon_js","z":"2b6f5d19.202242","name":"BabylonJs3 (Mesh wireframes)","group":"284af3b3.34ccbc","order":0,"width":"6","height":"6","folder":"","filename":"","outputField":"payload","actions":[{"selectorType":"meshName","selector":"my_box","trigger":"nothing","payload":"my_payload","topic":"my_topic"}],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":3,\"y\":3,\"z\":3},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true},{\"command\":\"create_mesh\",\"type\":\"box\",\"name\":\"my_box\",\"meshOptions\":{\"width\":1,\"height\":1,\"depth\":1},\"position\":{\"x\":0,\"y\":0,\"z\":0}},{\"command\":\"create_material\",\"name\":\"box_material\",\"targetName\":\"my_box\",\"diffuseColor\":{\"r\":255,\"g\":0,\"b\":0}}]","x":970,"y":260,"wires":[[]]},{"id":"83209769.6a1f98","type":"inject","z":"2b6f5d19.202242","name":"Show wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":true}","payloadType":"json","x":680,"y":260,"wires":[["739cddf3.86dac4"]]},{"id":"66ea45f1.2c2c7c","type":"inject","z":"2b6f5d19.202242","name":"Hide wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":false}","payloadType":"json","x":680,"y":300,"wires":[["739cddf3.86dac4"]]},{"id":"284af3b3.34ccbc","type":"ui_group","z":"","name":"Default","tab":"7a5078d4.54b268","order":1,"disp":true,"width":"6","collapse":false},{"id":"7a5078d4.54b268","type":"ui_tab","z":"","name":"BabylonJs3 (Material)","icon":"dashboard","disabled":false,"hidden":false}]
 ```
+Which can be used to look through meshes:
+
+![wireframe](https://user-images.githubusercontent.com/14224149/109400605-eff02b80-7949-11eb-963c-afc540a766d8.png)
 
 ### Mesh types
+
+BabylonJs offers a number of mesh types, each with their own properties:
 
 ![Create meshes flow](https://user-images.githubusercontent.com/14224149/108909896-70025280-7625-11eb-8d48-6d6fdbe070c1.png)
 ```
