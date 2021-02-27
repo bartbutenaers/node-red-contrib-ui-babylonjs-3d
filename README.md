@@ -129,9 +129,13 @@ Some remarks about this flow:
 
 + The command `update_camera` allows the properties of an existing camera (by name) to be updated.  This can be used e.g. to make another camera the active one...
 
++ For this demo you need to download the free [building model](https://sketchfab.com/3d-models/building-b3295edbc6ee4023978c2209df0d9a35) on your server, and specify the file path in the node's config screen.  Note that this is a low resolution box with a detailed texture applied to it...
+
 If multiple preset positions are required (i.e. view a scene from multiple angles), this can be achieved in multiple ways:
 + Update the position of a single camera.
 + Create multiple cameras and switch between those cameras, by specifying which camera needs to be active.
+
+![camera demo](https://user-images.githubusercontent.com/14224149/109401917-f1255680-7951-11eb-833d-fcaebfc5fe26.gif)
     
 ### Gizmos
 
