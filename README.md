@@ -1,8 +1,31 @@
 # node-red-contrib-ui-babylonjs-3d
 A Node-RED widget node to show an interactive BabylonJs 3D scene in the Node-RED dashboard
 
+| :warning: THIS IS AN EXPERIMENTAL NODE:  |
+|:---------------------------|
++ The API can still change, which means existing flows need to be changed manually. 
++ Starting from 5/3/2021 I won't be able to develop for a few months, so don't expect any response/fixes/developments soon!
++ When you have a feature request, it is always a big help if you can have a looka at the BabylonJs docs and provide me some info to get started.
++ Before posting a new Github issue, check whether the same issue hasn't been reported already.
++ ***THIS NODE IS NOT AVAILABLE ON NPM OR IN THE NODE-RED PALETTE (SEE INSTALLATION COMMAND BELOW)!!!***
 
-## 
+## Install
+Run the following npm command in your Node-RED user directory (typically ~/.node-red):
+```
+npm install bartbutenaers/node-red-contrib-ui-babylonjs-3d
+```
+
+## Support my Node-RED developments
+
+Please buy my wife a coffee to keep her happy, while I am busy developing Node-RED stuff for you ...
+
+<a href="https://www.buymeacoffee.com/bartbutenaers" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy my wife a coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
+
+## Getting started
+
+Some basic steps to setup a 3D scene with this node:
+1. When you have 3D file (gltf, glb or obj), install it on your server and specify the path to it in the node's config screen.
+2. Add the required startup commands in the *"Startup"* field on the config screen.
 
 ## Meshes
 
