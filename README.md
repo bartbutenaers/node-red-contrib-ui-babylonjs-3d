@@ -222,20 +222,29 @@ Which can be used to look through meshes:
 
 ## Helper tools
 
+### Pick action
+
+As explained above, it is possible to apply a pick-action to a mesh.
+
 ### Axes viewer
+
+In case you have no idea where the origin (0, 0, 0) of the coordinate system is located, it is possible to show the 3 axes:
 
 ![Axes viewer](https://user-images.githubusercontent.com/14224149/109351739-0a5ad400-787a-11eb-93ed-18612971de29.png)
 ```
 [{"id":"19d2dc03.344814","type":"inject","z":"2b6f5d19.202242","name":"Show short axes","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_axes\",\"showAxes\":true,\"scaleLines\":1}","payloadType":"json","x":220,"y":280,"wires":[["c1f721a9.284de"]]},{"id":"b0585dec.4fc3d","type":"inject","z":"2b6f5d19.202242","name":"Hide axes","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_axes\",\"showAxes\":false}","payloadType":"json","x":240,"y":360,"wires":[["c1f721a9.284de"]]},{"id":"21351d09.f8bf82","type":"inject","z":"2b6f5d19.202242","name":"Show long axes","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_axes\",\"showAxes\":true,\"scaleLines\":1.5}","payloadType":"json","x":220,"y":320,"wires":[["c1f721a9.284de"]]},{"id":"c1f721a9.284de","type":"ui_babylon_js","z":"2b6f5d19.202242","name":"BabylonJs (Axes)","group":"26b94af2.881a86","order":2,"width":"6","height":"6","folder":"","filename":"","outputField":"","actions":[],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":3,\"y\":3,\"z\":3},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true},{\"command\":\"create_mesh\",\"type\":\"box\",\"name\":\"my_box\",\"meshOptions\":{\"width\":1,\"height\":1,\"depth\":1},\"position\":{\"x\":0,\"y\":0,\"z\":0}}]","x":490,"y":280,"wires":[[]]},{"id":"26b94af2.881a86","type":"ui_group","z":"","name":"Axes","tab":"d8520920.0128d8","order":3,"disp":true,"width":"6","collapse":false},{"id":"d8520920.0128d8","type":"ui_tab","name":"Home","icon":"dashboard","disabled":false,"hidden":false}]
 ```
+The size of the axes can be defined via the `scaleLines` property.
 
 ### Selection mode
+
+From time to time it is useful to get some information about one or more meshes in the scene.  But if you don't know theire name (e.g. for an imported 3D file), it is not possible to use a `get_mesh_properties` command.  In those cases you can activate the selection mode:
 
 ![image](https://user-images.githubusercontent.com/14224149/109353716-0aa89e80-787d-11eb-9700-e16bb38beef1.png)
 ```
 [{"id":"4a0d2504.c6c09c","type":"inject","z":"2b6f5d19.202242","name":"Start selection mode","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"start_selection_mode\",\"outlineWidth\":0.05,\"outlineColor\":{\"r\":255,\"g\":0,\"b\":0}}","payloadType":"json","x":230,"y":100,"wires":[["8ab59cae.e48d"]]},{"id":"f79a6c3.2b4dc9","type":"inject","z":"2b6f5d19.202242","name":"Stop selection mode","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"stop_selection_mode\"}","payloadType":"json","x":230,"y":140,"wires":[["8ab59cae.e48d"]]},{"id":"5f77a80e.d25d28","type":"debug","z":"2b6f5d19.202242","name":"3D output","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":760,"y":100,"wires":[]},{"id":"8ab59cae.e48d","type":"ui_babylon_js","z":"2b6f5d19.202242","name":"BabylonJs (Selection mode)","group":"d4a8599c.28f058","order":2,"width":"6","height":"6","folder":"","filename":"","outputField":"","actions":[],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":3,\"y\":3,\"z\":3},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true},{\"command\":\"create_mesh\",\"type\":\"box\",\"name\":\"my_box\",\"meshOptions\":{\"width\":1,\"height\":1,\"depth\":1},\"position\":{\"x\":0,\"y\":0,\"z\":0}}]","x":520,"y":100,"wires":[["5f77a80e.d25d28"]]},{"id":"d4a8599c.28f058","type":"ui_group","z":"","name":"Selection mode","tab":"d8520920.0128d8","order":2,"disp":true,"width":"6","collapse":false},{"id":"d8520920.0128d8","type":"ui_tab","name":"Home","icon":"dashboard","disabled":false,"hidden":false}]
 ```
-
+When being in selection mode, it is possible to click on meshes in the 3D scene.  The selected mesh will get a RED outline, and an output message will be send containing the mesh information.
 
 ## Demos
 
