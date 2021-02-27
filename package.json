@@ -3,10 +3,11 @@
     "version": "0.0.1",
     "description": "A Node-RED widget node to show an interactive BabylonJs 3D scene in the Node-RED dashboard",
     "dependencies": {
-       "mime": "^2.4.4",
-       "@panzoom/panzoom": "^4.1.0",
-       "hammerjs": "^2.0.8",
-        "js-beautify": "^1.11.0"
+        "babylonjs": "^4.2.0",
+        "babylonjs-loaders": "^4.2.0",
+        "babylonjs-gui": "^4.2.0",
+        "pepjs": "^0.5.3",
+        "earcut": "^2.2.2"
     },
     "author": {
         "name": "Bart Butenaers"
