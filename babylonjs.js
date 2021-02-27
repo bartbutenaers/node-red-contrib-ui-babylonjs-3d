@@ -457,11 +457,11 @@ https://doc.babylonjs.com/divingDeeper/tags
                                     });
                                 }
                                 else {
-                                    camera = $scope.scene.getLightByName(payload.name);
+                                    camera = $scope.scene.getCameraByName(payload.name);
                                 }
                             }
                             else if (payload.id && payload.id !== "") {
-                                camera = $scope.scene.getLightByID(payload.id);
+                                camera = $scope.scene.getCameraByID(payload.id);
                             }
                             else {
                                 if (required) {
@@ -611,7 +611,6 @@ https://doc.babylonjs.com/divingDeeper/tags
                                 new BABYLON.ExecuteCodeAction(
                                     actionTrigger,
                                     function (evt) {
-                                        debugger;
                                         // Send an output message containing information about which action occured on the scene
                                         $scope.send({
                                             payload: payloadToSend,
@@ -922,7 +921,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                          
                             // The target position can be set for all camera types, except the followCamera
                             if (payload.type !== "followCamera") {
-                                var targetPosition = getVector(payload, "targetPosition", true);
+                                var targetPosition = getVector(payload, "targetPosition", false);
 
                                 if (targetPosition) {
                                     camera.setTarget(targetPosition);
@@ -1005,7 +1004,6 @@ https://doc.babylonjs.com/divingDeeper/tags
                             var command = payload.command.toLowerCase();
                                         
                             try {
-                                debugger;
                                 switch (command) {
                                     case "create_mesh":
                                         if (!payload.type || (typeof payload.type !== "string") ) {
@@ -1064,7 +1062,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                             case "ground":
                                                 mesh = BABYLON.MeshBuilder.CreateGround(name, options, $scope.scene);
                                                 break;
-                                            case "groundFromHeightMap":
+                                            case "groundFromHeightMap": // TODO this doesn't work yet !!
                                                 // TODO validate payload.urlToHeightMap
                                                 mesh = BABYLON.MeshBuilder.CreateGroundFromHeightMap(name, payload.urlToHeightMap, options, $scope.scene);
                                                 break;
@@ -1303,7 +1301,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         meshes = getMeshes(payload, true);
                                         
                                         meshes.forEach(function (meshForAction) {
-                                            applyActionToMesh(meshForAction, actionTrigger, payloadToSend, topicToSend);
+                                            applyActionToMesh(meshForAction, payload.actionTrigger, payload.payloadToSend, payload.topicToSend);
                                         });
                                         break;
                                     case "add_scene_action":
@@ -1602,7 +1600,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         cameras = getCameras(payload, true);
                                         
                                         cameras.forEach(function (cameraToGet) {
-                                            updateCamera(payload, camera);
+                                            updateCamera(payload, cameraToGet);
                                         });
                                         break;
                                     case "get_camera_properties":
@@ -1618,28 +1616,15 @@ https://doc.babylonjs.com/divingDeeper/tags
                                             return;
                                         }
                                         
-                                        if (payload.showAxes === true) {
-                                            // Only create the AxesViewer when not created yet
-                                            if (!$scope.axesViewer) {
-                                                $scope.axesViewer = new BABYLON.Debug.AxesViewer($scope.scene, 1);
-                                            }
+                                        if ($scope.axesViewer) {
+                                            // Hide the current axes
+                                            $scope.axesViewer.dispose();
+                                            $scope.axesViewer = null;
                                         }
-                                        else {
-                                            if ($scope.axesViewer) {
-                                                // Hide the axes
-                                                $scope.axesViewer.dispose();
-                                                $scope.axesViewer = null;
-                                            }
-                                        }
-                                        
-                                        if ($scope.axesViewer) {                                          
-                                            if (!isNaN(payload.scaleLines)) {
-                                                $scope.axesViewer.scaleLines = payload.scaleLines;
-                                            }
-
                                             
+                                        if (payload.showAxes === true) {
+                                            $scope.axesViewer = new BABYLON.Debug.AxesViewer($scope.scene, payload.scaleLines);
                                         }
-                                        
                                         break;
                                     case "start_selection_mode":
                                         if (!$scope.scene.onPointerDown) {
@@ -1678,6 +1663,10 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         }
                                         break;
                                     case "stop_selection_mode":
+                                        if ($scope.previousPick) {
+                                            $scope.previousPick.renderOutline = false;
+                                        }
+                                                
                                         $scope.scene.onPointerDown = null;
                                         break;
                                     //case "store_scene":
@@ -1703,7 +1692,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         }
 
                                         // Create a gui control of the specified type
-                                        switch(payload.controlType) {
+                                        switch(payload.type) {
                                             case "stackPanel":
                                                 control = new BABYLON.GUI.StackPanel();
                                                 
@@ -1902,7 +1891,6 @@ https://doc.babylonjs.com/divingDeeper/tags
                             // See https://forum.babylonjs.com/t/input-not-recognised-until-window-resize-triggered-or-change-focus/15653/7
                             // As a workaround I call the resize function very shortly after startup...
                             setTimeout(function(){ 
-                            debugger;
                                 if ($scope.engine) {
                                     $scope.engine.resize();
                                 }
