@@ -81,10 +81,26 @@ Some remarks about this flow:
     
 ### Gizmos
 
+Gizmo's are objects that can be attached to a existing node (e.g. meshm), to provide user interaction with that node.  For example to scale, move, rotate... that node manually.
+
+BabylonJs offers different kinds of gizmos:
+
+![Gizmos](https://user-images.githubusercontent.com/14224149/109386451-f0150a80-78fa-11eb-8098-bc5c60a4db37.png)
+
+The following example flow demonstrates how different kind of gizmos can be created:
+
 ![Create gizmo flow](https://user-images.githubusercontent.com/14224149/108910683-8066fd00-7626-11eb-90a5-02659be13092.png)
 ```
 [{"id":"fdfcf844.039a28","type":"ui_babylon_js","z":"2b6f5d19.202242","name":"BabylonJs5 (Gizmo demo)","group":"6d46881d.dc2b88","order":0,"width":"12","height":"11","folder":"","filename":"","outputField":"payload","actions":[],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":3,\"y\":3,\"z\":3},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true},{\"command\":\"create_mesh\",\"type\":\"box\",\"name\":\"my_box\",\"meshOptions\":{\"width\":1,\"height\":1,\"depth\":1},\"position\":{\"x\":0,\"y\":0,\"z\":0}}]","x":1280,"y":1660,"wires":[[]]},{"id":"6c6fba54.d02f94","type":"inject","z":"2b6f5d19.202242","name":"Create axisDrag gizmo","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"add_gizmo\",\"name\":\"my_box\",\"type\":\"axisDrag\",\"direction\":{\"x\":1,\"y\":0,\"z\":0},\"outlineColor\":{\"r\":255,\"g\":0,\"b\":0}}","payloadType":"json","x":980,"y":1540,"wires":[["fdfcf844.039a28"]]},{"id":"528b7b19.c0de44","type":"inject","z":"2b6f5d19.202242","name":"Create axisScale gizmo","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"add_gizmo\",\"name\":\"my_box\",\"type\":\"axisScale\",\"direction\":{\"x\":1,\"y\":0,\"z\":0},\"outlineColor\":{\"r\":255,\"g\":0,\"b\":0}}","payloadType":"json","x":980,"y":1580,"wires":[["fdfcf844.039a28"]]},{"id":"d61972da.92563","type":"inject","z":"2b6f5d19.202242","name":"Create planeRotation gizmo","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"add_gizmo\",\"name\":\"my_box\",\"type\":\"planeRotation\",\"direction\":{\"x\":1,\"y\":0,\"z\":0},\"outlineColor\":{\"r\":255,\"g\":0,\"b\":0}}","payloadType":"json","x":960,"y":1620,"wires":[["fdfcf844.039a28"]]},{"id":"f22b0ad8.fb1928","type":"inject","z":"2b6f5d19.202242","name":"Create position gizmo","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"add_gizmo\",\"name\":\"my_box\",\"type\":\"position\"}","payloadType":"json","x":980,"y":1660,"wires":[["fdfcf844.039a28"]]},{"id":"332f1821.99a208","type":"inject","z":"2b6f5d19.202242","name":"Create scale gizmo","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"add_gizmo\",\"name\":\"my_box\",\"type\":\"scale\"}","payloadType":"json","x":990,"y":1700,"wires":[["fdfcf844.039a28"]]},{"id":"bf382804.dd4328","type":"inject","z":"2b6f5d19.202242","name":"Create rotation gizmo","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"add_gizmo\",\"name\":\"my_box\",\"type\":\"rotation\"}","payloadType":"json","x":980,"y":1740,"wires":[["fdfcf844.039a28"]]},{"id":"97af2b5f.2fefb8","type":"inject","z":"2b6f5d19.202242","name":"Create boundingBox gizmo","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"add_gizmo\",\"name\":\"my_box\",\"type\":\"boundingBox\"}","payloadType":"json","x":970,"y":1780,"wires":[["fdfcf844.039a28"]]},{"id":"241a172c.eb3908","type":"inject","z":"2b6f5d19.202242","name":"Remove gizmo","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"remove_gizmo\"}","payloadType":"json","x":1000,"y":1840,"wires":[["fdfcf844.039a28"]]},{"id":"6d46881d.dc2b88","type":"ui_group","name":"Gizmo demo","tab":"555447ec.4acbe8","order":1,"disp":true,"width":"12","collapse":false},{"id":"555447ec.4acbe8","type":"ui_tab","name":"BabylonJs5","icon":"dashboard","disabled":false,"hidden":false}]
 ```
+
+I found gizmos very useful to setup an initial scene:
+1. Add a command to the *"Startup"* command on my node config screen, to create a mesh (e.g. a box) with some position and size.
+2. As soon as the mesh is visualised, inject a message to add a gizmo to it.
+3. By using the gizmo's it becomes possible to transform the mesh to whatever I want, until the mesh position/size/... fits your needs.
+4. Inject a message containing a `get_mesh_properties` command to get the properties of the mesh, which are the properties after the gizmo transforms had been applied.
+5. Copy the transformed properties from the debug panel, and copy those to the mesh in the *"Startup"* command on the node config screen.
+6. After refreshing the screen, the mesh will be displayed automatically with the wanted position/size/...
 
 ## GUI controls
 
