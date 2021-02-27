@@ -7,6 +7,7 @@ A Node-RED widget node to show an interactive BabylonJs 3D scene in the Node-RED
 + Starting from 5/3/2021 I won't be able to develop for a few months, so don't expect any response/fixes/developments soon!
 + When you have a feature request, it is always a big help if you can have a looka at the BabylonJs docs and provide me some info to get started.
 + Before posting a new Github issue, check whether the same issue hasn't been reported already.
++ This node is far from finished, and will certainly contain bugs.  So keep that in mind while testing!
 + ***THIS NODE IS NOT AVAILABLE ON NPM OR IN THE NODE-RED PALETTE (SEE INSTALLATION COMMAND BELOW)!!!***
 
 ## Install
@@ -52,18 +53,6 @@ Via transformations it is possible to position a mesh (or multiple meshes) at a 
 ```
 [{"id":"222d2073.79327","type":"inject","z":"2b6f5d19.202242","name":"Position mesh","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh\",\"id\":\"my_box\",\"position\":{\"x\":0,\"y\":0,\"z\":1}}","payloadType":"json","x":450,"y":140,"wires":[["52b6c290.e8f12c"]]},{"id":"433aa8f2.e4ed78","type":"inject","z":"2b6f5d19.202242","name":"Rotate mesh","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh\",\"id\":\"my_box\",\"rotation\":{\"x\":0,\"y\":0,\"z\":45}}","payloadType":"json","x":450,"y":180,"wires":[["52b6c290.e8f12c"]]},{"id":"52b6c290.e8f12c","type":"ui_babylon_js","z":"2b6f5d19.202242","name":"BabylonJs3 (Mesh transformations)","group":"284af3b3.34ccbc","order":0,"width":"6","height":"6","folder":"","filename":"","outputField":"payload","actions":[{"selectorType":"meshName","selector":"my_box","trigger":"nothing","payload":"my_payload","topic":"my_topic"}],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":3,\"y\":3,\"z\":3},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true},{\"command\":\"create_mesh\",\"type\":\"box\",\"name\":\"my_box\",\"meshOptions\":{\"width\":1,\"height\":1,\"depth\":1},\"position\":{\"x\":0,\"y\":0,\"z\":0}}]","x":740,"y":140,"wires":[["6914f76a.da0758"]]},{"id":"6914f76a.da0758","type":"debug","z":"2b6f5d19.202242","name":"3D output","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":980,"y":140,"wires":[]},{"id":"284af3b3.34ccbc","type":"ui_group","z":"","name":"Default","tab":"7a5078d4.54b268","order":1,"disp":true,"width":"6","collapse":false},{"id":"7a5078d4.54b268","type":"ui_tab","z":"","name":"BabylonJs3 (Material)","icon":"dashboard","disabled":false,"hidden":false}]
 ```
-
-### Wireframes
-
-A mesh can be updated to show it in wireframe mode:
-
-![Wireframe](https://user-images.githubusercontent.com/14224149/109358280-ca98ea00-7883-11eb-932e-9958ebb12808.png)
-```
-[{"id":"739cddf3.86dac4","type":"ui_babylon_js","z":"2b6f5d19.202242","name":"BabylonJs3 (Mesh wireframes)","group":"284af3b3.34ccbc","order":0,"width":"6","height":"6","folder":"","filename":"","outputField":"payload","actions":[{"selectorType":"meshName","selector":"my_box","trigger":"nothing","payload":"my_payload","topic":"my_topic"}],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":3,\"y\":3,\"z\":3},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true},{\"command\":\"create_mesh\",\"type\":\"box\",\"name\":\"my_box\",\"meshOptions\":{\"width\":1,\"height\":1,\"depth\":1},\"position\":{\"x\":0,\"y\":0,\"z\":0}},{\"command\":\"create_material\",\"name\":\"box_material\",\"targetName\":\"my_box\",\"diffuseColor\":{\"r\":255,\"g\":0,\"b\":0}}]","x":970,"y":260,"wires":[[]]},{"id":"83209769.6a1f98","type":"inject","z":"2b6f5d19.202242","name":"Show wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":true}","payloadType":"json","x":680,"y":260,"wires":[["739cddf3.86dac4"]]},{"id":"66ea45f1.2c2c7c","type":"inject","z":"2b6f5d19.202242","name":"Hide wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":false}","payloadType":"json","x":680,"y":300,"wires":[["739cddf3.86dac4"]]},{"id":"284af3b3.34ccbc","type":"ui_group","z":"","name":"Default","tab":"7a5078d4.54b268","order":1,"disp":true,"width":"6","collapse":false},{"id":"7a5078d4.54b268","type":"ui_tab","z":"","name":"BabylonJs3 (Material)","icon":"dashboard","disabled":false,"hidden":false}]
-```
-Which can be used to look through meshes:
-
-![wireframe](https://user-images.githubusercontent.com/14224149/109400605-eff02b80-7949-11eb-963c-afc540a766d8.png)
 
 ### Mesh types
 
@@ -205,10 +194,31 @@ Some remarks about this flow:
 
 ## Materials
 
+Materials are used to cover meshes in color and texture. How a material is displayed depends on the light(s) used in the scene, and how the material is configured to react to those lights.  A material can react in 4 possible ways that to light:
++ *Diffuse*: the basic color or texture of the material as viewed under a light.
++ *Specular*: the highlight given to the material by a light.
++ *Emissive*: the color or texture of the material as if self lit.
++ *Ambient*: the color or texture of the material lit by the environmental background lighting.
+
+The following flow demonstrates how to use materials:
+
 ![Materials](https://user-images.githubusercontent.com/14224149/109355819-19dd1b80-7880-11eb-986d-3b4dff82e180.png)
 ```
 [{"id":"9decf1f0.6daa3","type":"inject","z":"2b6f5d19.202242","name":"Create and apply material","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"create_material\",\"name\":\"box_material\",\"targetName\":\"my_box\",\"diffuseColor\":{\"r\":255,\"g\":0,\"b\":0}}","payloadType":"json","x":1330,"y":600,"wires":[["f816d7c.5ffcd28"]]},{"id":"78997b59.4c5094","type":"inject","z":"2b6f5d19.202242","name":"Create material","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"create_material\",\"name\":\"box_material_2\",\"diffuseColor\":{\"r\":0,\"g\":255,\"b\":0}}","payloadType":"json","x":1300,"y":480,"wires":[["f816d7c.5ffcd28"]]},{"id":"b08249d2.a90858","type":"inject","z":"2b6f5d19.202242","name":"Apply material","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"apply_mesh_material\",\"name\":\"box_material_2\",\"targetName\":\"my_box\"}","payloadType":"json","x":1290,"y":520,"wires":[["f816d7c.5ffcd28"]]},{"id":"f816d7c.5ffcd28","type":"ui_babylon_js","z":"2b6f5d19.202242","name":"BabylonJs3 (Material)","group":"284af3b3.34ccbc","order":0,"width":"6","height":"6","folder":"","filename":"","outputField":"payload","actions":[{"selectorType":"meshName","selector":"my_box","trigger":"nothing","payload":"my_payload","topic":"my_topic"}],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":3,\"y\":3,\"z\":3},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true},{\"command\":\"create_mesh\",\"type\":\"box\",\"name\":\"my_box\",\"meshOptions\":{\"width\":1,\"height\":1,\"depth\":1},\"position\":{\"x\":0,\"y\":0,\"z\":0}}]","x":1580,"y":480,"wires":[["a500491a.627b38"]]},{"id":"a500491a.627b38","type":"debug","z":"2b6f5d19.202242","name":"3D output","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":1780,"y":480,"wires":[]},{"id":"207be304.084a4c","type":"inject","z":"2b6f5d19.202242","name":"Update material","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"my_box\",\"diffuseColor\":{\"r\":0,\"g\":0,\"b\":255}}","payloadType":"json","x":1300,"y":560,"wires":[["f816d7c.5ffcd28"]]},{"id":"284af3b3.34ccbc","type":"ui_group","z":"","name":"Default","tab":"7a5078d4.54b268","order":1,"disp":true,"width":"6","collapse":false},{"id":"7a5078d4.54b268","type":"ui_tab","z":"","name":"BabylonJs3 (Material)","icon":"dashboard","disabled":false,"hidden":false}]
 ```
+So it is possible to create a material, and apply that afterwards to one or more meshes.  However when creating a material, it can be applied immediately to one or more meshes (by appending the `targetName` property to the command).
+
+### Wireframes
+
+A mesh material can be updated to show it in wireframe mode:
+
+![Wireframe](https://user-images.githubusercontent.com/14224149/109358280-ca98ea00-7883-11eb-932e-9958ebb12808.png)
+```
+[{"id":"739cddf3.86dac4","type":"ui_babylon_js","z":"2b6f5d19.202242","name":"BabylonJs3 (Mesh wireframes)","group":"284af3b3.34ccbc","order":0,"width":"6","height":"6","folder":"","filename":"","outputField":"payload","actions":[{"selectorType":"meshName","selector":"my_box","trigger":"nothing","payload":"my_payload","topic":"my_topic"}],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":3,\"y\":3,\"z\":3},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true},{\"command\":\"create_mesh\",\"type\":\"box\",\"name\":\"my_box\",\"meshOptions\":{\"width\":1,\"height\":1,\"depth\":1},\"position\":{\"x\":0,\"y\":0,\"z\":0}},{\"command\":\"create_material\",\"name\":\"box_material\",\"targetName\":\"my_box\",\"diffuseColor\":{\"r\":255,\"g\":0,\"b\":0}}]","x":970,"y":260,"wires":[[]]},{"id":"83209769.6a1f98","type":"inject","z":"2b6f5d19.202242","name":"Show wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":true}","payloadType":"json","x":680,"y":260,"wires":[["739cddf3.86dac4"]]},{"id":"66ea45f1.2c2c7c","type":"inject","z":"2b6f5d19.202242","name":"Hide wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":false}","payloadType":"json","x":680,"y":300,"wires":[["739cddf3.86dac4"]]},{"id":"284af3b3.34ccbc","type":"ui_group","z":"","name":"Default","tab":"7a5078d4.54b268","order":1,"disp":true,"width":"6","collapse":false},{"id":"7a5078d4.54b268","type":"ui_tab","z":"","name":"BabylonJs3 (Material)","icon":"dashboard","disabled":false,"hidden":false}]
+```
+Which can be used to look through meshes:
+
+![wireframe](https://user-images.githubusercontent.com/14224149/109400605-eff02b80-7949-11eb-963c-afc540a766d8.png)
 
 ## Helper tools
 
