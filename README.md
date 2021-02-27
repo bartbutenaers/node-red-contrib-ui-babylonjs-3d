@@ -78,6 +78,10 @@ Some remarks about this flow:
 +  The command `create_camera` creates a camera in the scene, without the camera becoming the active camera.  By adding the json parameter `"active": true`, the camera will become immediately active (which means you can create a single command to create and activate a camera).
 
 + The command `update_camera` allows the properties of an existing camera (by name) to be updated.  This can be used e.g. to make another camera the active one...
+
+If multiple preset positions are required (i.e. view a scene from multiple angles), this can be achieved in multiple ways:
++ Update the position of a single camera.
++ Create multiple cameras and switch between those cameras, by specifying which camera needs to be active.
     
 ### Gizmos
 
@@ -104,10 +108,19 @@ I found gizmos very useful to setup an initial scene:
 
 ## GUI controls
 
+A GUI control is a (2D) widget that can be displayed on top of the scene, to interact directly with the scene.
+
+BabylonJs offers different types of GUI controls, but currently only the colorpicker is supported in this node:
+
 ![image](https://user-images.githubusercontent.com/14224149/109226975-e20e9f00-77bf-11eb-8309-945e9f6f91be.png)
 ```
 [{"id":"a12627a6.c0b228","type":"ui_babylon_js","z":"2b6f5d19.202242","name":"BabylonJs widgets","group":"ac886c83.c74f1","order":2,"width":"12","height":"9","folder":"C:\\Users\\Gebruiker\\Downloads","filename":"solar_panel.glb","outputField":"payload","actions":[],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":1360,\"y\":28,\"z\":480},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true}]","x":510,"y":1760,"wires":[[]]},{"id":"f878b6fb.09a598","type":"inject","z":"2b6f5d19.202242","name":"Create colorpicker","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"create_gui_control\",\"type\":\"colorPicker\",\"name\":\"my_colorpicker\",\"targetName\":\"default light\",\"targetProperty\":\"diffuse\",\"horizontalAlignment\":\"right\"}","payloadType":"json","x":250,"y":1760,"wires":[["a12627a6.c0b228"]]},{"id":"21a66d86.b199d2","type":"comment","z":"2b6f5d19.202242","name":"Note that light has 'diffuse' property instead of 'diffuseColor' (like material)","info":"","x":400,"y":1700,"wires":[]},{"id":"ac886c83.c74f1","type":"ui_group","name":"Gui control demo","tab":"956f2124.271f6","order":2,"disp":true,"width":"12","collapse":false},{"id":"956f2124.271f6","type":"ui_tab","name":"BabylonJs Widgets","icon":"dashboard","disabled":false,"hidden":false}]
 ```
+By binding the colorpicker directly to the color of the light, it becomes possible to control the light via the colorpicker:
+
+![colorpicker_demo](https://user-images.githubusercontent.com/14224149/109399149-5cb2f800-7941-11eb-846f-d9108e10b8d7.gif)
+
+Remark: download the free [solar panel](https://www.cgtrader.com/free-3d-models/electronics/other/cartoon-low-poly-solar-panel) file, install it on your server, and add the path to the node's config screen to get this demo working.
 
 ## Animations
 
