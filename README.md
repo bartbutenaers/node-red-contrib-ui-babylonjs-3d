@@ -259,3 +259,5 @@ The following demo combines a number of techniques: when a problem has been dete
 Which will result into this:
 
 ![mission_impossible](https://user-images.githubusercontent.com/14224149/109401772-e3bb9c80-7950-11eb-958b-2e374b5b925c.gif)
+
+For this demo, you need to download the free [building model](https://sketchfab.com/3d-models/sanzio-predio-0c60bb2de7d4429fa00097b4a769eb0c) to your server, and specify the file path in the node's config screen.
