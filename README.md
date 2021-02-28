@@ -25,10 +25,18 @@ Please buy my wife a coffee to keep her happy, while I am busy developing Node-R
 ## Getting started
 
 Some basic steps to setup a 3D scene with this node:
-1. Create a 3D scene in a third party 3D editor that can export gltf/glb/obj files.  Of course this step is not needed when you want to create a 3D scene from scratch via messages from Node-RED...    
-2. When you have a 3D file exported (gltf, glb or obj), install it on your server and specify the path to it in the node's config screen.  For obj files, all related files (e.g. material .mtl file) should be stored in the same directory as the obj file!
+1. Check (e.g. [here](https://get.webgl.org/)) whether you browser supports WebGL.  I had to enable the WebGL 2.0 experimental features in Chrome:
+
+   ![web gl](https://user-images.githubusercontent.com/14224149/109410772-a6c9c700-799d-11eb-9c7d-72261766abc5.png)
+
+   Remark: WebGL is a JavaScript API for rendering interactive 2D and 3D graphics within any compatible web browser without the use of plug-ins. 
+
+2. Create a 3D scene in a third party 3D editor that can export gltf/glb/obj files.  Of course this step is not needed when you want to create a 3D scene from scratch via messages from Node-RED... 
+   
+3. When you have a 3D file exported (gltf, glb or obj), install it on your server and specify the path to it in the node's config screen.  For obj files, all related files (e.g. material .mtl file) should be stored in the same directory as the obj file!
    Note that currently there is a [bug](https://github.com/bartbutenaers/node-red-contrib-ui-babylonjs-3d/issues/2) for obj files!
-3. Add the required startup commands in the *"Startup"* field on the config screen (which will be executed as soon as the dashboard tabsheet is loaded, e.g. to setup a camera, lights, meshes, ...
+   
+4. Add the required startup commands in the *"Startup"* field on the config screen (which will be executed as soon as the dashboard tabsheet is loaded, e.g. to setup a camera, lights, meshes, ...
 
 ## Meshes
 
