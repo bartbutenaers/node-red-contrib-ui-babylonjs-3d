@@ -4,7 +4,7 @@ A Node-RED widget node to show an interactive BabylonJs 3D scene in the Node-RED
 | :warning: THIS IS AN EXPERIMENTAL NODE:  |
 |:---------------------------|
 + The API can still change, which means existing flows need to be changed manually. 
-+ Starting from 5/3/2021 I won't be able to develop for a few months, so don't expect any response/fixes/developments soon!
++ ***Starting from 5/3/2021 I won't be able to develop for a few months, so don't expect any response/fixes/developments soon!***
 + When you have a feature request, it is always a big help if you can have a looka at the BabylonJs docs and provide me some info to get started.
 + Before posting a new Github issue, check whether the same issue hasn't been reported already.
 + This node is far from finished, and will certainly contain bugs.  So keep that in mind while testing!
