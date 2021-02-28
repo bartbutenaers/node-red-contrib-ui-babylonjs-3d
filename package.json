@@ -33,7 +33,7 @@
     },
     "node-red": {
         "nodes": {
-            "ui_babylon_js": "babylon.js"
+            "ui_babylon_js": "babylonjs.js"
         }
     }
 }
