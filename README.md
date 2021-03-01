@@ -9,6 +9,7 @@ A Node-RED widget node to show an interactive BabylonJs 3D scene in the Node-RED
 + Before posting a new Github issue, check whether the same issue hasn't been reported already.
 + This node is far from finished, and will certainly contain bugs.  So keep that in mind while testing!
 + ***THIS NODE IS NOT AVAILABLE ON NPM OR IN THE NODE-RED PALETTE (SEE INSTALLATION COMMAND BELOW)!!!***
++ Only a small part of the BabylonJs API has been implemented in this node at the moment.
 
 ## Install
 Run the following npm command in your Node-RED user directory (typically ~/.node-red):
