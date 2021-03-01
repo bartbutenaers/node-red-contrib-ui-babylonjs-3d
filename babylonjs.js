@@ -36,6 +36,9 @@ https://doc.babylonjs.com/divingDeeper/tags
 */
 
 
+    // Note that BabylonJs offers two version of all their packages on npm: one version with "@" and one version without it.
+    // For example "babylonjs-gui" and also "@babylonjs/gui".
+    // The packages with "@" are es6 modules (to be used with 'import'), so we need to packages without "@" (to be used with 'require').
     
     // -------------------------------------------------------------------------------------------------
     // Determining the path to the files in the dependent babylonjs module once.
@@ -918,9 +921,18 @@ https://doc.babylonjs.com/divingDeeper/tags
                                 // A scene can only have 1 active camera
                                 $scope.scene.activeCamera = camera;
                             }
+                            
+                            // The position can be set for all rotate camera types
+                            if (camera.getClassName() === "ArcRotateCamera" || camera.getClassName() === "AnaglyphArcRotateCamera") {
+                                var position = getVector(payload, "position", false);
+
+                                if (position) {
+                                    camera.setPosition(position);
+                                }
+                            }
                          
                             // The target position can be set for all camera types, except the followCamera
-                            if (payload.type !== "followCamera") {
+                            if (camera.getClassName() !== "FollowCamera") {
                                 var targetPosition = getVector(payload, "targetPosition", false);
 
                                 if (targetPosition) {
@@ -1518,8 +1530,8 @@ https://doc.babylonjs.com/divingDeeper/tags
                                                 // The 3 parameters after the name (i.e. alpha, beta, radius will be overwritten be our position vector.
                                                 // This way we avoid that users need to calculate the angles themselves...
                                                 // Pass (0,0,0) as target vector, since the target vector will be update at the end of this function anyway.
+                                                // The position will be set further on, in the updateCamera function
                                                 camera = new BABYLON.ArcRotateCamera(name, 0, 0, 0, BABYLON.Vector3(0, 0, 0), $scope.scene);
-                                                camera.setPosition(position);
                                                 break;
                                             case "follow":
                                                 meshes = getMeshes({name: payload.targetName, id: payload.targetId}, true);
@@ -1569,8 +1581,8 @@ https://doc.babylonjs.com/divingDeeper/tags
                                                 // The 3 parameters after the name (i.e. alpha, beta, radius) will be overwritten be our position vector.
                                                 // This way we avoid that users need to calculate the angles themselves...
                                                 // Pass (0,0,0) as target vector, since the target vector will be update at the end of this function anyway.
+                                                // The position will be set further on, in the updateCamera function
                                                 camera = new BABYLON.AnaglyphArcRotateCamera(name, 0, 0, 0, BABYLON.Vector3(0, 0, 0), payload.eyeSpace, $scope.scene);
-                                                camera.setPosition(position);
                                                 break;
                                             case "deviceOrientation":
                                                 targetPosition = getVector(payload, "targetPosition", true);
@@ -1591,7 +1603,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                                 }
                                                 break;
                                         }
-                                        
+
                                         updateCamera(payload, camera);
                                         
                                         camera.attachControl($scope.canvas, true);
