@@ -4,12 +4,9 @@ A Node-RED widget node to show an interactive BabylonJs 3D scene in the Node-RED
 | :warning: THIS IS AN EXPERIMENTAL NODE:  |
 |:---------------------------|
 + The API can still change, which means existing flows need to be changed manually. 
-+ ***Starting from 5/3/2021 I won't be able to develop for a few months, so don't expect any response/fixes/developments soon!***
-+ When you have a feature request, it is always a big help if you can have a looka at the BabylonJs docs and provide me some info to get started.
-+ Before posting a new Github issue, check whether the same issue hasn't been reported already.
 + This node is far from finished, and will certainly contain bugs.  So keep that in mind while testing!
 + ***THIS NODE IS NOT AVAILABLE ON NPM OR IN THE NODE-RED PALETTE (SEE INSTALLATION COMMAND BELOW)!!!***
-+ Only a small part of the BabylonJs API has been implemented in this node at the moment.
++ Only a small part of the BabylonJs API has been implemented in this node at the moment.  Since I don't have time to implement the entire API, I will add new features when people explicit request them.
 
 ## Install
 Run the following npm command in your Node-RED user directory (typically ~/.node-red):
@@ -56,7 +53,33 @@ Some remarks about this flow:
 + Get the properties of a mesh.
 + Add a pick-action to a mesh (see the "Helper tools" section).
 
-### Mesh transformations
+### Update mesh
+
+The ***"update_mesh"*** command can be used to update all kind of settings of a mesh.
+
+#### Basic mesh properties
+
+Beside to apply a material to a mesh, it is also possible to apply an ***outline color*** and an ***overlay color***:
+
+![Mesh colors](https://user-images.githubusercontent.com/14224149/136688081-56a2ef0c-0fea-479e-b006-e28f4a5c36d2.png)
+```
+[{"id":"c0f3285e45d4e683","type":"ui_babylon_js","z":"7f9646080c92c297","name":"BabylonJs3 (Mesh transformations)","group":"284af3b3.34ccbc","order":0,"width":"6","height":"6","folder":"","filename":"","outputField":"payload","actions":[{"selectorType":"meshName","selector":"my_box","trigger":"nothing","payload":"my_payload","topic":"my_topic"}],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":20,\"y\":20,\"z\":20},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true},{\"command\":\"create_mesh\",\"type\":\"box\",\"name\":\"my_box\",\"meshOptions\":{\"width\":10,\"height\":10,\"depth\":10},\"position\":{\"x\":0,\"y\":0,\"z\":0}}]","x":560,"y":640,"wires":[["95182b665c786c29"]]},{"id":"95182b665c786c29","type":"debug","z":"7f9646080c92c297","name":"3D output","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":800,"y":640,"wires":[]},{"id":"b5fd673f2233194b","type":"inject","z":"7f9646080c92c297","name":"Red outline color","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh\",\"id\":\"my_box\",\"outlineWidth\":1,\"outlineColor\":{\"r\":255,\"g\":0,\"b\":0},\"renderOutline\":true}","payloadType":"json","x":260,"y":640,"wires":[["c0f3285e45d4e683"]]},{"id":"b3b45d006abb4f59","type":"inject","z":"7f9646080c92c297","name":"Blue overlay color","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh\",\"id\":\"my_box\",\"overlayColor\":{\"r\":0,\"g\":0,\"b\":255},\"renderOverlay\":true,\"overlayAlpha\":1}","payloadType":"json","x":250,"y":680,"wires":[["c0f3285e45d4e683"]]},{"id":"284af3b3.34ccbc","type":"ui_group","name":"Default","tab":"7a5078d4.54b268","order":1,"disp":true,"width":"6","collapse":false},{"id":"7a5078d4.54b268","type":"ui_tab","name":"BabylonJs3 (Material)","icon":"dashboard","order":24,"disabled":false,"hidden":false}]
+```
+Note that this feature is not implemented entirely correctly yet!  But not sure where the problem is at the moment ...
+
+### Bounding box
+
+It is possible to display the bounding box of a mesh.  A bounding box is an imaginary box, that completely includes the mesh and is used as a collision box for that object (for fast calculations of mesh collisions).
+
+![Bounding box](https://user-images.githubusercontent.com/14224149/136688091-15bc5f8c-30ea-4568-ac3f-14e09c110495.png)
+```
+[{"id":"d5b874685d2e22e9","type":"inject","z":"7f9646080c92c297","name":"Show bounding box","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh\",\"id\":\"my_sphere\",\"showBoundingBox\":true}","payloadType":"json","x":210,"y":780,"wires":[["55f16d2bf2fcc2b3"]]},{"id":"46dfef637b9453ee","type":"inject","z":"7f9646080c92c297","name":"Hide bounding box","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh\",\"id\":\"my_sphere\",\"showBoundingBox\":false}","payloadType":"json","x":210,"y":820,"wires":[["55f16d2bf2fcc2b3"]]},{"id":"55f16d2bf2fcc2b3","type":"ui_babylon_js","z":"7f9646080c92c297","name":"BabylonJs3 mesh bounding box","group":"284af3b3.34ccbc","order":0,"width":"6","height":"6","folder":"","filename":"","outputField":"payload","actions":[{"selectorType":"meshName","selector":"my_box","trigger":"nothing","payload":"my_payload","topic":"my_topic"}],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":20,\"y\":20,\"z\":20},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true},{\"command\":\"create_mesh\",\"type\":\"sphere\",\"name\":\"my_sphere\",\"meshOptions\":{\"diameterX\":10,\"diameterY\":10,\"diameterZ\":10},\"position\":{\"x\":0,\"y\":0,\"z\":0}}]","x":510,"y":780,"wires":[["589429510883a04b"]]},{"id":"589429510883a04b","type":"debug","z":"7f9646080c92c297","name":"3D output","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":760,"y":780,"wires":[]},{"id":"284af3b3.34ccbc","type":"ui_group","name":"Default","tab":"7a5078d4.54b268","order":1,"disp":true,"width":"6","collapse":false},{"id":"7a5078d4.54b268","type":"ui_tab","name":"BabylonJs3 (Material)","icon":"dashboard","order":24,"disabled":false,"hidden":false}]
+```
+For example for a sphere, the bounding box will look like this:
+
+![boundingbox sphere](https://user-images.githubusercontent.com/14224149/136688260-9136f702-d081-4069-a47a-baf2f3b3f479.png)
+
+#### Transformations
 
 Via transformations it is possible to position a mesh (or multiple meshes) at a specified location, or to rotate it:
 
@@ -64,6 +87,18 @@ Via transformations it is possible to position a mesh (or multiple meshes) at a 
 ```
 [{"id":"222d2073.79327","type":"inject","z":"2b6f5d19.202242","name":"Position mesh","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh\",\"id\":\"my_box\",\"position\":{\"x\":0,\"y\":0,\"z\":1}}","payloadType":"json","x":450,"y":140,"wires":[["52b6c290.e8f12c"]]},{"id":"433aa8f2.e4ed78","type":"inject","z":"2b6f5d19.202242","name":"Rotate mesh","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh\",\"id\":\"my_box\",\"rotation\":{\"x\":0,\"y\":0,\"z\":45}}","payloadType":"json","x":450,"y":180,"wires":[["52b6c290.e8f12c"]]},{"id":"52b6c290.e8f12c","type":"ui_babylon_js","z":"2b6f5d19.202242","name":"BabylonJs3 (Mesh transformations)","group":"284af3b3.34ccbc","order":0,"width":"6","height":"6","folder":"","filename":"","outputField":"payload","actions":[{"selectorType":"meshName","selector":"my_box","trigger":"nothing","payload":"my_payload","topic":"my_topic"}],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":3,\"y\":3,\"z\":3},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true},{\"command\":\"create_mesh\",\"type\":\"box\",\"name\":\"my_box\",\"meshOptions\":{\"width\":1,\"height\":1,\"depth\":1},\"position\":{\"x\":0,\"y\":0,\"z\":0}}]","x":740,"y":140,"wires":[["6914f76a.da0758"]]},{"id":"6914f76a.da0758","type":"debug","z":"2b6f5d19.202242","name":"3D output","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":980,"y":140,"wires":[]},{"id":"284af3b3.34ccbc","type":"ui_group","z":"","name":"Default","tab":"7a5078d4.54b268","order":1,"disp":true,"width":"6","collapse":false},{"id":"7a5078d4.54b268","type":"ui_tab","z":"","name":"BabylonJs3 (Material)","icon":"dashboard","disabled":false,"hidden":false}]
 ```
+
+### Wireframes
+
+A mesh material can be updated to show it in wireframe mode:
+
+![Wireframe](https://user-images.githubusercontent.com/14224149/109358280-ca98ea00-7883-11eb-932e-9958ebb12808.png)
+```
+[{"id":"739cddf3.86dac4","type":"ui_babylon_js","z":"2b6f5d19.202242","name":"BabylonJs3 (Mesh wireframes)","group":"284af3b3.34ccbc","order":0,"width":"6","height":"6","folder":"","filename":"","outputField":"payload","actions":[{"selectorType":"meshName","selector":"my_box","trigger":"nothing","payload":"my_payload","topic":"my_topic"}],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":3,\"y\":3,\"z\":3},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true},{\"command\":\"create_mesh\",\"type\":\"box\",\"name\":\"my_box\",\"meshOptions\":{\"width\":1,\"height\":1,\"depth\":1},\"position\":{\"x\":0,\"y\":0,\"z\":0}},{\"command\":\"create_material\",\"name\":\"box_material\",\"targetName\":\"my_box\",\"diffuseColor\":{\"r\":255,\"g\":0,\"b\":0}}]","x":970,"y":260,"wires":[[]]},{"id":"83209769.6a1f98","type":"inject","z":"2b6f5d19.202242","name":"Show wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":true}","payloadType":"json","x":680,"y":260,"wires":[["739cddf3.86dac4"]]},{"id":"66ea45f1.2c2c7c","type":"inject","z":"2b6f5d19.202242","name":"Hide wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":false}","payloadType":"json","x":680,"y":300,"wires":[["739cddf3.86dac4"]]},{"id":"284af3b3.34ccbc","type":"ui_group","z":"","name":"Default","tab":"7a5078d4.54b268","order":1,"disp":true,"width":"6","collapse":false},{"id":"7a5078d4.54b268","type":"ui_tab","z":"","name":"BabylonJs3 (Material)","icon":"dashboard","disabled":false,"hidden":false}]
+```
+Which can be used to look through meshes:
+
+![wireframe](https://user-images.githubusercontent.com/14224149/109400605-eff02b80-7949-11eb-963c-afc540a766d8.png)
 
 ### Mesh types
 
@@ -227,18 +262,6 @@ The following flow demonstrates how to use materials:
 ```
 So it is possible to create a material, and apply that afterwards to one or more meshes.  However when creating a material, it can be applied immediately to one or more meshes (by appending the `targetName` property to the command).
 
-### Wireframes
-
-A mesh material can be updated to show it in wireframe mode:
-
-![Wireframe](https://user-images.githubusercontent.com/14224149/109358280-ca98ea00-7883-11eb-932e-9958ebb12808.png)
-```
-[{"id":"739cddf3.86dac4","type":"ui_babylon_js","z":"2b6f5d19.202242","name":"BabylonJs3 (Mesh wireframes)","group":"284af3b3.34ccbc","order":0,"width":"6","height":"6","folder":"","filename":"","outputField":"payload","actions":[{"selectorType":"meshName","selector":"my_box","trigger":"nothing","payload":"my_payload","topic":"my_topic"}],"showBrowserErrors":true,"startupCommands":"[{\"command\":\"create_camera\",\"type\":\"arcRotate\",\"name\":\"my_arcRotate_cam\",\"position\":{\"x\":3,\"y\":3,\"z\":3},\"targetPosition\":{\"x\":0,\"y\":0,\"z\":0},\"active\":true},{\"command\":\"create_mesh\",\"type\":\"box\",\"name\":\"my_box\",\"meshOptions\":{\"width\":1,\"height\":1,\"depth\":1},\"position\":{\"x\":0,\"y\":0,\"z\":0}},{\"command\":\"create_material\",\"name\":\"box_material\",\"targetName\":\"my_box\",\"diffuseColor\":{\"r\":255,\"g\":0,\"b\":0}}]","x":970,"y":260,"wires":[[]]},{"id":"83209769.6a1f98","type":"inject","z":"2b6f5d19.202242","name":"Show wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":true}","payloadType":"json","x":680,"y":260,"wires":[["739cddf3.86dac4"]]},{"id":"66ea45f1.2c2c7c","type":"inject","z":"2b6f5d19.202242","name":"Hide wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":false}","payloadType":"json","x":680,"y":300,"wires":[["739cddf3.86dac4"]]},{"id":"284af3b3.34ccbc","type":"ui_group","z":"","name":"Default","tab":"7a5078d4.54b268","order":1,"disp":true,"width":"6","collapse":false},{"id":"7a5078d4.54b268","type":"ui_tab","z":"","name":"BabylonJs3 (Material)","icon":"dashboard","disabled":false,"hidden":false}]
-```
-Which can be used to look through meshes:
-
-![wireframe](https://user-images.githubusercontent.com/14224149/109400605-eff02b80-7949-11eb-963c-afc540a766d8.png)
-
 ## Helper tools
 
 ### Pick action
@@ -269,14 +292,14 @@ When being in selection mode, it is possible to click on meshes in the 3D scene.
 
 ### Mission impossible style
 
-The following demo combines a number of techniques: when a problem has been detected in a room, the building is displayed in wireframe and the room will be highlighted in red.
+The following demo combines a number of techniques: when a problem has been detected in a room, the building is displayed in wireframe and the room or roof will be highlighted in red.
 
-![image](https://user-images.githubusercontent.com/14224149/109227349-7a0c8880-77c0-11eb-92c8-949bc7833909.png)
+![mission impossible](https://user-images.githubusercontent.com/14224149/136688720-069fb68c-643c-43fc-9e90-22ea336453f8.png)
 ```
-[{"id":"2ad576ac8b3bbc4b","type":"ui_babylon_js","z":"7f9646080c92c297","name":"BabylongJs2 (Mission impossible style)","group":"33049469.4e754c","order":0,"width":"12","height":"14","folder":"C:\\Users\\Gebruiker\\Downloads\\sanzio","filename":"scene.gltf","outputField":"payload","actions":[],"showBrowserErrors":false,"startupCommands":"[]","x":760,"y":360,"wires":[[]]},{"id":"c19de8e5542ae7d8","type":"inject","z":"7f9646080c92c297","name":"Show wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":true}","payloadType":"json","x":440,"y":360,"wires":[["2ad576ac8b3bbc4b"]]},{"id":"6c5416afc3720f7d","type":"inject","z":"7f9646080c92c297","name":"Hide wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":false}","payloadType":"json","x":440,"y":400,"wires":[["2ad576ac8b3bbc4b"]]},{"id":"97e3dc8338989d99","type":"inject","z":"7f9646080c92c297","name":"Show appartement in red","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh\",\"name\":\"Shape018_paredes_0\",\"outlineWidth\":120,\"outlineColor\":{\"r\":255,\"g\":0,\"b\":0},\"renderOutline\":true}","payloadType":"json","x":410,"y":300,"wires":[["2ad576ac8b3bbc4b"]]},{"id":"33049469.4e754c","type":"ui_group","name":"Mission impossible style","tab":"c2805f33.505de","order":1,"disp":true,"width":"12","collapse":false},{"id":"c2805f33.505de","type":"ui_tab","name":"BabylonJs2","icon":"dashboard","order":23,"disabled":false,"hidden":false}]
+[{"id":"2ad576ac8b3bbc4b","type":"ui_babylon_js","z":"7f9646080c92c297","name":"BabylongJs2 (Mission impossible style)","group":"33049469.4e754c","order":0,"width":"12","height":"14","folder":"C:\\Users\\Gebruiker\\Downloads\\sanzio","filename":"scene.gltf","outputField":"payload","actions":[],"showBrowserErrors":false,"startupCommands":"[]","x":760,"y":360,"wires":[[]]},{"id":"c19de8e5542ae7d8","type":"inject","z":"7f9646080c92c297","name":"Show wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":true}","payloadType":"json","x":400,"y":360,"wires":[["2ad576ac8b3bbc4b"]]},{"id":"6c5416afc3720f7d","type":"inject","z":"7f9646080c92c297","name":"Hide wireframe","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh_material\",\"name\":\"^.*\",\"wireframe\":false}","payloadType":"json","x":400,"y":400,"wires":[["2ad576ac8b3bbc4b"]]},{"id":"97e3dc8338989d99","type":"inject","z":"7f9646080c92c297","name":"Show appartement in red outline color","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh\",\"name\":\"Shape018_paredes_0\",\"outlineWidth\":120,\"outlineColor\":{\"r\":255,\"g\":0,\"b\":0},\"renderOutline\":true}","payloadType":"json","x":330,"y":440,"wires":[["2ad576ac8b3bbc4b"]]},{"id":"5637244c42d4a91d","type":"inject","z":"7f9646080c92c297","name":"Show roof in red overlay color","props":[{"p":"payload"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","payload":"{\"command\":\"update_mesh\",\"name\":\"Box018_paredes_0\",\"overlayColor\":{\"r\":255,\"g\":0,\"b\":0},\"renderOverlay\":true,\"overlayAlpha\":1}","payloadType":"json","x":360,"y":480,"wires":[["2ad576ac8b3bbc4b"]]},{"id":"33049469.4e754c","type":"ui_group","name":"Mission impossible style","tab":"c2805f33.505de","order":1,"disp":true,"width":"12","collapse":false},{"id":"c2805f33.505de","type":"ui_tab","name":"BabylonJs2","icon":"dashboard","order":23,"disabled":false,"hidden":false}]
 ```
 Which will result into this:
 
-![mission_impossible](https://user-images.githubusercontent.com/14224149/109401772-e3bb9c80-7950-11eb-958b-2e374b5b925c.gif)
+![mission_impossible_demo](https://user-images.githubusercontent.com/14224149/136688735-5c94d629-9c74-4c87-936e-c45dadedecc0.gif)
 
 For this demo, you need to download the free [building model](https://sketchfab.com/3d-models/sanzio-predio-0c60bb2de7d4429fa00097b4a769eb0c) to your server, and specify the file path in the node's config screen.
