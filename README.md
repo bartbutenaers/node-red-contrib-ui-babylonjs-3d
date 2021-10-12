@@ -57,9 +57,15 @@ Some remarks about this flow:
 
 The ***"update_mesh"*** command can be used to update all kind of settings of a mesh.
 
-#### Basic mesh properties
+#### Mesh colors
 
-Beside to apply a material to a mesh, it is also possible to apply an ***outline color*** and an ***overlay color***:
+Beside to apply a coloured material to a mesh, it is also possible to apply:
++ ***overlay color***: the color that will be overlayed on the mesh planes.
++ ***outline color***: the color that will be applied to the mesh outline (i.e. the visual borders of the mesh, not all the edges!).  Note that the outline width needs to be kept small, otherwise strange artifacts will occur at the corners (as described here).  For example a box with large outline width:
+
+![Outline color](https://user-images.githubusercontent.com/14224149/137030156-04c61afd-5d49-42da-99d4-272583276ffb.png)
+
+Example flow:
 
 ![Mesh colors](https://user-images.githubusercontent.com/14224149/136688081-56a2ef0c-0fea-479e-b006-e28f4a5c36d2.png)
 ```
