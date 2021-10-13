@@ -531,7 +531,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                             
                             // The applied r,g,b values are numbers from 0 to 255, while Color3/4 expect numbers between 0 and 1.
                             // When an extra alpha channel is specified, create a Color4 instance instead of a Color3 instance.
-                            if (fieldValue != undefined && fieldValue.a != undefined && isNaN(fieldValue.a)) {
+                            if (fieldValue != undefined && fieldValue.a != undefined && !isNaN(fieldValue.a)) {
                                 return new BABYLON.Color4.FromInts(fieldValue.r, fieldValue.g, fieldValue.b, fieldValue.a);
                             }
                             else {
@@ -848,13 +848,59 @@ https://doc.babylonjs.com/divingDeeper/tags
                             if (outlineColor) {
                                 mesh.outlineColor = outlineColor;
                             }
-                            
+
                             // Toggle the outline for the picked mesh
-                            if(!mesh.renderOutline) {
-                                mesh.renderOutline = true;
+                            if(payload.renderOutline != undefined) {
+                                if (payload.renderOutline == true) {
+                                    mesh.renderOutline = true;
+                                }
+                                else {
+                                    mesh.renderOutline = false;
+                                }
                             }
-                            else {
-                                mesh.renderOutline = false;
+
+                            var overlayColor = getRgbColor(payload, "overlayColor", false);
+                            if (overlayColor) {
+                                mesh.overlayColor = overlayColor;
+                            }
+                            
+                            // Toggle the overlay for the picked mesh
+                            if(payload.renderOverlay != undefined) {
+                                if (payload.renderOverlay == true) {
+                                    mesh.renderOverlay = true;
+                                }
+                                else {
+                                    mesh.renderOverlay = false;
+                                }
+                            }
+
+                            // Toggle the edges for the picked mesh
+                            if(payload.renderEdges != undefined) {
+                                if (payload.renderEdges == true) {
+                                    mesh.enableEdgesRendering();
+                                }
+                                else {
+                                    mesh.disableEdgesRendering();
+                                }
+                            }
+                            
+                            if (payload.edgesWidth) {
+                                mesh.edgesWidth = payload.edgesWidth;
+                            }                            
+
+                            var edgesColor = getRgbColor(payload, "edgesColor", false);
+                            if (edgesColor) {
+                                mesh.edgesColor = edgesColor;
+                            }
+ 
+                            // Toggle the bounding box for the picked mesh
+                            if(payload.showBoundingBox != undefined) {
+                                if (payload.showBoundingBox == true) {
+                                    mesh.showBoundingBox = true;
+                                }
+                                else {
+                                    mesh.showBoundingBox = false;
+                                }
                             }
                         }
                         
@@ -1016,7 +1062,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                             var command = payload.command.toLowerCase();
                                         
                             try {
-                                switch (command) {
+                                switch (command.toLowerCase()) {
                                     case "create_mesh":
                                         if (!payload.type || (typeof payload.type !== "string") ) {
                                             logError("The payload should contain a meshType");
@@ -2033,7 +2079,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                             if (!msg) {
                                 return;
                             }
-                            
+           
                             var payload = msg.payload;
                             var topic = msg.topic;
            
