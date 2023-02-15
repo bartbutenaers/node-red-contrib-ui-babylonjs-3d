@@ -839,6 +839,11 @@ https://doc.babylonjs.com/divingDeeper/tags
                                 mesh.rotation.y = BABYLON.Tools.ToRadians(rotation.y);
                                 mesh.rotation.z = BABYLON.Tools.ToRadians(rotation.z);
                             }
+
+                            if (payload.enabled !== undefined && typeof payload.enabled === "boolean") {
+                                // Switch the mesh visibility on or off
+                                mesh.setEnabled(payload.enabled);
+                            }
                                         
                             if (payload.outlineWidth) {
                                 mesh.outlineWidth = payload.outlineWidth;
