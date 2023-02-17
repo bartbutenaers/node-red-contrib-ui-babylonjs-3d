@@ -325,7 +325,54 @@ https://doc.babylonjs.com/divingDeeper/tags
                             
                             return meshes;
                         }
-                        
+
+                        // Gets the transform nodes based on id, name, tag
+                        function getTransformNodes(payload, required) {
+                            var transformNode;
+                            var transformNodes = [];
+
+                            if (payload.name && payload.name !== "") {
+                                if (Array.isArray(payload.name)) {
+                                    payload.name.forEach(function(name) {
+                                        transformNodes.push($scope.scene.getTransformNodeByName(name));
+                                    });
+                                }
+                                if (payload.name.startsWith("^")) {
+                                    var regex = new RegExp(payload.name);
+
+                                    $scope.scene.transformNodes.forEach(function (transformNodeToTest) {
+                                        if (transformNodeToTest.name && regex.test(transformNodeToTest.name)) {
+                                             transformNodes.push(transformNodeToTest);
+                                        }
+                                    });
+                                }
+                                else {
+                                    transformNode = $scope.scene.getTransformNodeByName(payload.name);
+                                }
+                            }
+                            else if (payload.id && payload.id !== "") {
+                                transformNode = $scope.scene.getTransformNodeByID(payload.id);
+                            }
+                            else if (payload.tag && payload.tag) {
+                                transformNode = $scope.scene.getTransformNodesByTags(payload.tag);
+                            }
+                            else {
+                                if (required) {
+                                    logError("The name or id of the transform node should be specified");
+                                }
+                            }
+            
+                            if (transformNode) {
+                                transformNodes.push(transformNode);
+                            }
+                            
+                            if (required && transformNodes.length === 0) {
+                                logError("No transform nodes found with the specified name or id");
+                            }
+                            
+                            return transformNodes;
+                        }
+
                         function getLights(payload, required) {
                             var light;
                             var lights = [];
@@ -827,6 +874,22 @@ https://doc.babylonjs.com/divingDeeper/tags
                         }
                         
                         function updateMesh(payload, mesh) {
+                            if (payload.parent) {
+                                var transformNodes = getTransformNodes(payload.parent, false);
+                                
+                                if (transformNodes.length == 0) {
+                                    logError("No transform nodes found with the specified payload.parent information");
+                                    return;
+                                }
+                                
+                                if (transformNodes.length > 1) {
+                                    logError("More than one transform nodes found with the specified payload.parent information");
+                                    return;
+                                }
+                                
+                                mesh.parent = transformNodes[0];
+                            }
+                            
                             var position = getVector(payload, "position", false);
                             if (position) {
                                 mesh.position = position;
@@ -838,6 +901,11 @@ https://doc.babylonjs.com/divingDeeper/tags
                                 mesh.rotation.x = BABYLON.Tools.ToRadians(rotation.x);
                                 mesh.rotation.y = BABYLON.Tools.ToRadians(rotation.y);
                                 mesh.rotation.z = BABYLON.Tools.ToRadians(rotation.z);
+                            }
+
+                            var scaling = getVector(payload, "scaling", false);
+                            if (scaling) {
+                                mesh.scaling = scaling;
                             }
 
                             if (payload.enabled !== undefined && typeof payload.enabled === "boolean") {
@@ -908,7 +976,32 @@ https://doc.babylonjs.com/divingDeeper/tags
                                 }
                             }
                         }
-                        
+
+                        function updateTransformNode(payload, transformNode) {
+                            var position = getVector(payload, "position", false);
+                            if (position) {
+                                transformNode.position = position;
+                            }
+                           
+                            var rotation = getVector(payload, "rotation", false);
+                            if (rotation) {
+                                // Rotate the shape around the axes over the specified Euler angles (i.e. radians!!)
+                                transformNode.rotation.x = BABYLON.Tools.ToRadians(rotation.x);
+                                transformNode.rotation.y = BABYLON.Tools.ToRadians(rotation.y);
+                                transformNode.rotation.z = BABYLON.Tools.ToRadians(rotation.z);
+                            }
+
+                            if (payload.enabled !== undefined && typeof payload.enabled === "boolean") {
+                                // Switch the transformNode visibility on or off
+                                transformNode.setEnabled(payload.enabled);
+                            }
+
+                            var scaling = getVector(payload, "scaling", false);
+                            if (scaling) {
+                                transformNode.scaling = scaling;
+                            }
+                        }
+
                         function updateMaterial(payload, material) {
                             diffuseColor = getRgbColor(payload, "diffuseColor", false);
                             if (diffuseColor) {
@@ -1058,7 +1151,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                         }
 
                         function processCommand(payload, topic){
-                            var mesh, meshes, light, lights, material, materials, camera, cameras, nodes, control, controls;
+                            var mesh, meshes, transformNode, transformNodes, light, lights, material, materials, camera, cameras, nodes, control, controls;
                             var name = "";
                             var options = {};
                             var position, direction, alpha, beta, radius, degrees, radians, parentContainer;
@@ -1220,6 +1313,33 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         
                                         meshes.forEach(function (meshToGet) {
                                             sendMeshProperties(meshToGet);
+                                        });
+                                        break;
+                                    case "create_transform_node":
+                                        if (!payload.name || payload.name == "") {
+                                            logError("The payload should contain a transform node 'name'");
+                                            return;
+                                        }
+
+                                        name = payload.name;
+                                        tranformNode = new BABYLON.TransformNode(name); 
+
+                                        // If any properties have been specified in the message, apply those immediately to the new mesh
+                                        updateTransformNode(payload, tranformNode);
+                                        break;
+                                    case "update_transform_node":
+                                        transformNodes = getTransformNodes(payload, true);
+                                    
+                                        transformNodes.forEach(function (transformNodeToUpdate) {
+                                            updateTransformNode(payload, transformNodeToUpdate);
+                                        });
+                                        break;
+                                    case "remove_transform_node":
+                                        // No need to show a message, when the tranform node is already removed
+                                        transformNodes = getTransformNodes(payload, false);
+                                    
+                                        transformNodes.forEach(function (transformNodeToDispose) {
+                                            transformNodeToDispose.dispose();
                                         });
                                         break;
                                     case "create_light":
@@ -2096,7 +2216,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                             if(!Array.isArray(payload)){
                                 payload = [payload];
                             }
-                            
+
                             payload.forEach(function(val,idx){
                                 if(typeof val != "object" || !val.command) {
                                     logError("The msg.payload should contain an object (or an array of objects) which have a 'command' property.");
