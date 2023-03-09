@@ -1089,7 +1089,31 @@ https://doc.babylonjs.com/divingDeeper/tags
                             if (typeof payload.isVisible === "boolean") {
                                 control.isVisible = payload.isVisible;
                             }
-                            
+
+                            // When an (optional) mesh name/id is specified, then link the gui control to that mesh
+                            if (payload.targetName || payload.targetId) {
+                                var meshes = getMeshes({name: payload.targetName, id: payload.targetId}, true);
+                                
+                                switch (meshes.length) {
+                                    case 0:
+                                        // The getMeshes function already logged an error
+                                        break;
+                                    case 1:
+                                        control.linkWithMesh(meshes[0]);
+                                        break;
+                                    default:
+                                        logError("The gui control can only be linked to a single mesh, but multiple meshes were found");
+                                }
+                            }
+
+                            if (!isNaN(payload.targetOffsetX)) {
+                                control.linkOffsetX = payload.targetOffsetX;
+                            }
+
+                            if (!isNaN(payload.targetOffsetY)) {
+                                control.linkOffsetY = payload.targetOffsetY;
+                            }
+
                             // The default horizontal alignment is "center"
                             if (payload.horizontalAlignment) {
                                 switch (payload.horizontalAlignment) {
@@ -1123,6 +1147,70 @@ https://doc.babylonjs.com/divingDeeper/tags
                                         logError("The specified verticalAlignment value is not supported");
                                 }
                             }
+                            
+                            if (control.typeName == "TextBlock") {
+                                if (!isNaN(payload.lineSpacing)) {
+                                    control.lineSpacing = payload.lineSpacing + "px";
+                                }
+
+                                //if (payload.textWrapping != null) {
+                                //   control.textWrapping (payload.textWrapping);
+                                //}
+                                
+                                if (payload.resizeToFit != null) {
+                                    control.resizeToFit = payload.resizeToFit;
+                                }
+
+                                // The default horizontal alignment is "center"
+                                if (payload.textHorizontalAlignment) {
+                                    switch (payload.textHorizontalAlignment) {
+                                        case "left":
+                                            control.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+                                            break;
+                                        case "right":
+                                            control.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+                                            break;
+                                        case "center":
+                                            control.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+                                            break;
+                                        default:
+                                            logError("The specified textHorizontalAlignment value is not supported");
+                                    }
+                                }
+                               
+                                // The default vertical alignment is "center"
+                                if (payload.textVerticalAlignment) {
+                                    switch (payload.textVerticalAlignment) {
+                                        case "top":
+                                            control.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+                                            break;
+                                        case "bottom":
+                                            control.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+                                            break;
+                                        case "center":
+                                            control.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+                                            break;
+                                        default:
+                                            logError("The specified textVerticalAlignment value is not supported");
+                                    }
+                                }
+
+                                if (!isNaN(payload.outlineWidth)) {
+                                    control.outlineWidth = payload.outlineWidth;
+                                }
+
+                                if (payload.outlineColor) {
+                                    control.outlineColor = payload.outlineColor;
+                                }
+
+                                if (payload.color) {
+                                    control.color = payload.color;
+                                }
+
+                                if (!isNaN(payload.fontSize)) {
+                                    control.fontSize = payload.fontSize;
+                                }
+                            }
 
                             // The default height is 200%
                             if (!isNaN(payload.height)) {
@@ -1133,21 +1221,25 @@ https://doc.babylonjs.com/divingDeeper/tags
                             if (!isNaN(payload.width)) {
                                 control.width = payload.width + "px";
                             }
-                          
-                            control.onValueChangedObservable.add(function(value) {
-                                // Meshes, lights and camera's are all nodes (on which we can set a property value).
-                                // Now we search on the target name or id.
-                                var targetNodes = getNodes({name: payload.targetName, id: payload.targetId}, true);
-                                       
-                                targetNodes.forEach(function(targetNode) {
-                                    if (targetNode.hasOwnProperty(payload.targetProperty)) {
-                                        targetNode[payload.targetProperty].copyFrom(value);
-                                    }
-                                    else {
-                                        logError("The target node doesn't has the specified target property");
-                                    }                                        
+
+                            // For some gui controls the value can be changed (e.g. color picker, slider, ...).
+                            // Note that there also exist other kind of observables (e.g. onTextChangedObservable for textblock, ...)
+                            if (control.onValueChangedObservable) {
+                                control.onValueChangedObservable.add(function(value) {
+                                    // Meshes, lights and camera's are all nodes (on which we can set a property value).
+                                    // Now we search on the target name or id.
+                                    var targetNodes = getNodes({name: payload.targetName, id: payload.targetId}, true);
+                                           
+                                    targetNodes.forEach(function(targetNode) {
+                                        if (targetNode.hasOwnProperty(payload.targetProperty)) {
+                                            targetNode[payload.targetProperty].copyFrom(value);
+                                        }
+                                        else {
+                                            logError("The target node doesn't has the specified target property");
+                                        }                                        
+                                    });
                                 });
-                            });
+                            }
                         }
 
                         function processCommand(payload, topic){
@@ -1895,9 +1987,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                                                 logError("The specified horizontAlignment value is not supported");
                                         }
                                         
-                                        if (control) {
-                                            updateGuiControl(payload, control);
-                                            
+                                        if (control) {                                            
                                             // Try to get the parent container control
                                             parentContainer = getGuiControls({controlName: payload.parentName}, false);
                                             
@@ -1908,6 +1998,10 @@ https://doc.babylonjs.com/divingDeeper/tags
                                                 // Na parent control (e.g. StackPanel) has been specified, so add the control directly to the GUI layer
                                                 $scope.fullScreenUI.addControl(control);
                                             }
+                                            
+                                            // Update the gui control AFTER it has been added, because a gui control can only be linked to a mesh
+                                            // when the gui control has been added at root level
+                                            updateGuiControl(payload, control);
                                         }
                                         break;
                                     case "update_gui_control":
@@ -2035,7 +2129,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                             }
                             
                             $scope.scene = scene;
-                            
+                            debugger
                             if(!Array.isArray($scope.config.startupCommands)){
                                 $scope.config.startupCommands = [$scope.config.startupCommands];
                             }
@@ -2216,7 +2310,7 @@ https://doc.babylonjs.com/divingDeeper/tags
                             if(!Array.isArray(payload)){
                                 payload = [payload];
                             }
-
+                      debugger;      
                             payload.forEach(function(val,idx){
                                 if(typeof val != "object" || !val.command) {
                                     logError("The msg.payload should contain an object (or an array of objects) which have a 'command' property.");
