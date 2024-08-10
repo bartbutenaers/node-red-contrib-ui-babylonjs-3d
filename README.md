@@ -1,3 +1,7 @@
+> [!CAUTION]
+> **This third-party ui node was developed for the Node-RED AngularJs [dashboard](https://flows.nodered.org/node/node-red-dashboard), which is end of life.
+> Due to free time constraints, this old ui node won't be supported anymore!!**
+
 # node-red-contrib-ui-babylonjs-3d
 A Node-RED widget node to show an interactive BabylonJs 3D scene in the Node-RED dashboard
 
